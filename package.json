@@ -1,0 +1,36 @@
+{
+  "name": "zt-tiptap-export-pdf",
+  "version": "0.1.0",
+  "description": "Export editor DOM content to PDF in browser using jsPDF",
+  "type": "module",
+  "main": "dist/index.js",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test:manual": "vite manual-test --config manual-test/vite.config.ts"
+  },
+  "keywords": [
+    "pdf",
+    "jspdf",
+    "tiptap",
+    "editor",
+    "export"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "@vitejs/plugin-react": "^6.0.2",
+    "jspdf": "^3.0.3",
+    "react": "^19.2.6",
+    "react-dom": "^19.2.6",
+    "vite": "^8.0.13",
+    "zt-reactjs-tiptap": "^2.0.16"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3"
+  }
+}
