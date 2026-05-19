@@ -2,6 +2,7 @@ import { type jsPDF as JsPdfInstance } from "jspdf";
 import {
   CSS_PT_PER_PX,
   DEFAULT_BLOCK_MARGIN_BOTTOM_PT,
+  DEFAULT_BLOCKQUOTE_INDENT_PT,
   DEFAULT_LINE_HEIGHT_FACTOR,
   EXPORT_HEADING_STYLE_MAP,
   PREFERRED_LINE_BREAK_CHARACTERS,
@@ -68,10 +69,16 @@ export function getTextBlockStyle(element: HTMLElement, bodyFontSizePx: number):
   const lineHeightFactor = resolveLineHeightFactor(computedStyle, elementFontSizePx);
   // 块后间距（pt）。
   const marginBottomPt = pxToPt(parsePxValue(computedStyle.marginBottom)) || DEFAULT_BLOCK_MARGIN_BOTTOM_PT;
+  // 引用块左侧缩进（pt）。
+  const indentLeftPt =
+    tagName === "blockquote"
+      ? pxToPt(parsePxValue(computedStyle.paddingLeft)) || DEFAULT_BLOCKQUOTE_INDENT_PT
+      : undefined;
   return {
     fontSizePt,
     lineHeightPt: fontSizePt * lineHeightFactor,
     marginBottomPt,
+    indentLeftPt,
     fontStyle: "normal",
   };
 }

@@ -10,7 +10,7 @@ import {
   PDF_TOP_MARGIN_PT,
 } from "./exportConstants";
 import {
-  getBlockText,
+  getBlockExportContent,
   getElementRenderWidthPx,
   getExportBlockElements,
   resolveProseMirrorElement,
@@ -63,6 +63,13 @@ export async function exportEditorToPdf(
   offscreenContainer.style.width = `${sourceRenderWidthPx}px`;
   offscreenContainer.style.height = "auto";
   offscreenContainer.style.overflow = "visible";
+  // 补齐编辑器样式祖先，确保 .editor-wrapper .ProseMirror 规则生效。
+  const styleContextWrapper = document.createElement("div");
+  styleContextWrapper.className = "editor-wrapper";
+  styleContextWrapper.style.width = `${renderWidthPx}px`;
+  styleContextWrapper.style.height = "auto";
+  styleContextWrapper.style.maxHeight = "none";
+  styleContextWrapper.style.overflow = "visible";
 
   // 克隆后的编辑区节点。
   const clonedElement = element.cloneNode(true) as HTMLElement;
@@ -88,7 +95,8 @@ export async function exportEditorToPdf(
     proseMirrorElement.style.wordBreak = "break-all";
   }
 
-  offscreenContainer.appendChild(clonedElement);
+  styleContextWrapper.appendChild(clonedElement);
+  offscreenContainer.appendChild(styleContextWrapper);
   document.body.appendChild(offscreenContainer);
 
   try {
@@ -110,14 +118,22 @@ export async function exportEditorToPdf(
     const blockElements = getExportBlockElements(exportRootElement);
 
     blockElements.forEach((blockElement) => {
-      // 块级文本内容。
-      const blockText = getBlockText(blockElement);
-      if (!blockText) {
+      // 块级导出内容。
+      const blockContent = getBlockExportContent(blockElement, exportRootElement);
+      if (!blockContent.text) {
         return;
       }
       // 块级文本样式。
       const blockStyle = getTextBlockStyle(blockElement, bodyFontSizePx);
-      writeTextBlock(pdf, cursor, blockText, blockStyle, resolvedFontFamily);
+      writeTextBlock(pdf, cursor, {
+        text: blockContent.text,
+        style: blockStyle,
+        fontFamily: resolvedFontFamily,
+        taskListMarker: blockContent.taskListMarker,
+        listMarker: blockContent.listMarker,
+        listIndentPt: blockContent.listIndentPt,
+        blockType: blockContent.blockType,
+      });
     });
 
     pdf.save(resolvedFilename);

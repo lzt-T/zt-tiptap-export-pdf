@@ -22,6 +22,12 @@ export const DEFAULT_EXPORT_FONT_FAMILY = BUILTIN_FONT_FAMILY;
 export const DEFAULT_LINE_HEIGHT_FACTOR = 1.5;
 // 默认块后间距（pt）。
 export const DEFAULT_BLOCK_MARGIN_BOTTOM_PT = 8;
+// 引用块默认左侧缩进（pt）。
+export const DEFAULT_BLOCKQUOTE_INDENT_PT = 14;
+// 引用块左侧竖线与文本的间隔（pt）。
+export const BLOCKQUOTE_LINE_GAP_PT = 8;
+// 引用块左侧竖线宽度（pt）。
+export const BLOCKQUOTE_LINE_WIDTH_PT = 1;
 // 列表项前缀。
 export const LIST_ITEM_PREFIX = "• ";
 // 优先作为行尾断点的字符。

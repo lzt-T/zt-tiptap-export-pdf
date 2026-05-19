@@ -14,8 +14,30 @@ export interface ExportTextBlockStyle {
   lineHeightPt: number;
   /** 块后间距（pt）。 */
   marginBottomPt: number;
+  /** 左侧缩进（pt）。 */
+  indentLeftPt?: number;
   /** PDF 字体样式。 */
   fontStyle: "normal";
+}
+
+/** 任务列表标记状态。 */
+export type ExportTaskListMarker = "unchecked" | "checked";
+
+/** 导出文本块类型。 */
+export type ExportTextBlockType = "blockquote";
+
+/** 导出文本块内容。 */
+export interface ExportTextBlockContent {
+  /** 文本内容。 */
+  text: string;
+  /** 文本块类型。 */
+  blockType?: ExportTextBlockType;
+  /** 任务列表标记。 */
+  taskListMarker?: ExportTaskListMarker;
+  /** 列表项前缀文本（如 1. / a. / i. / •）。 */
+  listMarker?: string;
+  /** 列表项左侧缩进（pt）。 */
+  listIndentPt?: number;
 }
 
 /** PDF 写入游标。 */
