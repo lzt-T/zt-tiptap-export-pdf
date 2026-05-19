@@ -1,7 +1,7 @@
 import { type jsPDF as JsPdfInstance } from "jspdf";
 import { CSS_PT_PER_PX, PDF_TOP_MARGIN_PT } from "../exportConstants";
 import { splitTextToLines } from "../exportText";
-import { type PdfWriteCursor } from "../exportTypes";
+import { type ExportImageContent, type PdfWriteCursor } from "../exportTypes";
 import { ensureLineSpace } from "./shared";
 import { type WriteTextBlockParams } from "./types";
 
@@ -9,6 +9,19 @@ import { type WriteTextBlockParams } from "./types";
 const IMAGE_CAPTION_VISIBLE_TOP_GAP_PT = 8;
 // 图片说明文本与后续内容的底部间距（pt）。
 const IMAGE_CAPTION_BOTTOM_GAP_PT = 10;
+
+/** 计算图片写入 x 坐标。 */
+function getImageLeftPt(imageContent: ExportImageContent, cursor: PdfWriteCursor, imageWidthPt: number): number {
+  // 图片水平对齐方式。
+  const imageAlign = imageContent.align || "left";
+  if (imageAlign === "center") {
+    return cursor.leftPt + Math.max((cursor.contentWidthPt - imageWidthPt) / 2, 0);
+  }
+  if (imageAlign === "right") {
+    return cursor.leftPt + Math.max(cursor.contentWidthPt - imageWidthPt, 0);
+  }
+  return cursor.leftPt;
+}
 
 /** 写入公式截图图片块。 */
 export function writeImageTextBlock(
@@ -46,13 +59,15 @@ export function writeImageTextBlock(
   const captionBottomGapPt = captionLines.length > 0 ? IMAGE_CAPTION_BOTTOM_GAP_PT : 0;
   // 图片块整体高度（pt）。
   const blockHeightPt = imageHeightPt + captionBaselineGapPt + captionHeightPt + captionBottomGapPt;
+  // 图片写入 x 坐标。
+  const imageLeftPt = getImageLeftPt(imageContent, cursor, imageWidthPt);
 
   if (cursor.yPt + blockHeightPt > cursor.bottomPt) {
     pdf.addPage();
     cursor.yPt = PDF_TOP_MARGIN_PT;
   }
 
-  pdf.addImage(imageContent.dataUrl, "PNG", cursor.leftPt, cursor.yPt, imageWidthPt, imageHeightPt);
+  pdf.addImage(imageContent.dataUrl, "PNG", imageLeftPt, cursor.yPt, imageWidthPt, imageHeightPt);
   cursor.yPt += imageHeightPt + captionBaselineGapPt;
   if (captionLines.length > 0) {
     pdf.setFont(fontFamily, style.fontStyle);
@@ -63,7 +78,7 @@ export function writeImageTextBlock(
     // 图片说明宽度（pt）。
     const captionLineWidthPt = pdf.getTextWidth(captionLine);
     // 图片说明 x 坐标。
-    const captionLeftPt = cursor.leftPt + Math.max((imageWidthPt - captionLineWidthPt) / 2, 0);
+    const captionLeftPt = imageLeftPt + Math.max((imageWidthPt - captionLineWidthPt) / 2, 0);
     pdf.text(captionLine, captionLeftPt, cursor.yPt);
     cursor.yPt += style.lineHeightPt;
   });

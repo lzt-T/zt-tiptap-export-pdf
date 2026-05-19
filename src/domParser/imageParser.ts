@@ -26,6 +26,36 @@ function getImageElement(element: HTMLElement): HTMLImageElement | null {
   return imageElement instanceof HTMLImageElement ? imageElement : null;
 }
 
+/** 从元素样式读取图片水平对齐方式。 */
+function getImageAlignFromStyle(element: HTMLElement): ExportImageContent["align"] | null {
+  // 元素左外边距。
+  const marginLeft = element.style.marginLeft;
+  // 元素右外边距。
+  const marginRight = element.style.marginRight;
+  if (marginLeft === "auto" && marginRight === "auto") {
+    return "center";
+  }
+  if (marginLeft === "auto") {
+    return "right";
+  }
+  return null;
+}
+
+/** 读取图片水平对齐方式。 */
+function getImageAlign(element: HTMLElement, imageElement: HTMLImageElement): ExportImageContent["align"] {
+  // 图片块语义对齐。
+  const blockDataAlign = element.getAttribute("data-align");
+  if (blockDataAlign === "center" || blockDataAlign === "right" || blockDataAlign === "left") {
+    return blockDataAlign;
+  }
+  // 图片节点语义对齐。
+  const imageDataAlign = imageElement.getAttribute("data-align");
+  if (imageDataAlign === "center" || imageDataAlign === "right" || imageDataAlign === "left") {
+    return imageDataAlign;
+  }
+  return getImageAlignFromStyle(element) || getImageAlignFromStyle(imageElement) || "left";
+}
+
 /** 等待图片加载完成。 */
 async function waitForImageReady(imageElement: HTMLImageElement): Promise<boolean> {
   if (imageElement.complete && imageElement.naturalWidth > 0 && imageElement.naturalHeight > 0) {
@@ -192,6 +222,7 @@ export async function getImageBlockExportContent(element: HTMLElement): Promise<
     blockType: "image",
     imageContent: {
       dataUrl,
+      align: getImageAlign(element, imageElement),
       ...imageSize,
     },
     imageCaptionText: getImageCaptionText(element),

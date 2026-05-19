@@ -1,6 +1,6 @@
 import { type jsPDF as JsPdfInstance } from "jspdf";
 import { splitTextToLines } from "../exportText";
-import { type ExportTaskListMarker, type PdfWriteCursor } from "../exportTypes";
+import { type ExportTaskListMarker, type ExportTextBlockStyle, type PdfWriteCursor } from "../exportTypes";
 import { ensureLineSpace } from "./shared";
 import { type WriteTextBlockParams } from "./types";
 
@@ -12,6 +12,27 @@ const TASK_MARKER_GAP_RATIO = 0.45;
 const TASK_MARKER_MIN_SIZE_PT = 7;
 // 列表内容槽位最小宽度（em）。
 const LIST_CONTENT_SLOT_MIN_EM = 1.6;
+
+/** 计算当前文本行写入 x 坐标。 */
+function getTextLineLeftPt(
+  pdf: JsPdfInstance,
+  textLine: string,
+  textAlign: ExportTextBlockStyle["textAlign"],
+  textLeftPt: number,
+  textWidthPt: number,
+): number {
+  // 当前行文本宽度。
+  const lineWidthPt = pdf.getTextWidth(textLine);
+  // 当前行右对齐 x 坐标。
+  const rightAlignedXPt = textLeftPt + Math.max(textWidthPt - lineWidthPt, 0);
+  if (textAlign === "center") {
+    return textLeftPt + Math.max((textWidthPt - lineWidthPt) / 2, 0);
+  }
+  if (textAlign === "right") {
+    return rightAlignedXPt;
+  }
+  return textLeftPt;
+}
 
 /** 绘制任务列表标记。 */
 function drawTaskListMarker(
@@ -84,7 +105,13 @@ export function writeDefaultTextBlock(
     if (taskListMarker && lineIndex === 0) {
       drawTaskListMarker(pdf, taskListMarker, cursor.leftPt + listTextIndentPt, cursor.yPt, taskMarkerSizePt);
     }
-    pdf.text(textLine, textLeftPt, cursor.yPt);
+    if (style.textAlign === "justify" && lineIndex < textLines.length - 1) {
+      pdf.text(textLine, textLeftPt, cursor.yPt, { align: "justify", maxWidth: textWidthPt });
+    } else {
+      // 当前行写入 x 坐标。
+      const textLineLeftPt = getTextLineLeftPt(pdf, textLine, style.textAlign, textLeftPt, textWidthPt);
+      pdf.text(textLine, textLineLeftPt, cursor.yPt);
+    }
     cursor.yPt += style.lineHeightPt;
   });
   cursor.yPt += style.marginBottomPt;

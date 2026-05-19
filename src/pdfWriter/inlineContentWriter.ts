@@ -1,6 +1,12 @@
 import { type jsPDF as JsPdfInstance } from "jspdf";
 import { CSS_PT_PER_PX } from "../exportConstants";
-import { type ExportImageContent, type ExportInlineContentRun, type ExportTaskListMarker, type PdfWriteCursor } from "../exportTypes";
+import {
+  type ExportImageContent,
+  type ExportInlineContentRun,
+  type ExportTaskListMarker,
+  type ExportTextBlockStyle,
+  type PdfWriteCursor,
+} from "../exportTypes";
 import { ensureLineSpace } from "./shared";
 import { type WriteTextBlockParams } from "./types";
 
@@ -16,6 +22,43 @@ const LIST_CONTENT_SLOT_MIN_EM = 1.6;
 const INLINE_IMAGE_MAX_LINE_HEIGHT_RATIO = 0.9;
 // 行内图片基线对齐比例。
 const INLINE_IMAGE_BASELINE_RATIO = 0.82;
+
+/** 行内图片导出尺寸。 */
+interface InlineImageSizePt {
+  /** 图片宽度（pt）。 */
+  widthPt: number;
+  /** 图片高度（pt）。 */
+  heightPt: number;
+}
+
+/** 行内行项目。 */
+type InlineLineItem =
+  | {
+      /** 项目类型。 */
+      type: "text";
+      /** 文本内容。 */
+      text: string;
+      /** 项目宽度（pt）。 */
+      widthPt: number;
+    }
+  | {
+      /** 项目类型。 */
+      type: "image";
+      /** 图片内容。 */
+      imageContent: ExportImageContent;
+      /** 图片尺寸。 */
+      imageSize: InlineImageSizePt;
+      /** 项目宽度（pt）。 */
+      widthPt: number;
+    };
+
+/** 行内内容行。 */
+interface InlineContentLine {
+  /** 当前行项目列表。 */
+  items: InlineLineItem[];
+  /** 当前行宽度（pt）。 */
+  widthPt: number;
+}
 
 /** 绘制任务列表标记。 */
 function drawTaskListMarker(
@@ -52,7 +95,7 @@ function drawTaskListMarker(
 }
 
 /** 计算行内图片尺寸。 */
-function getInlineImageSizePt(imageContent: ExportImageContent, lineHeightPt: number) {
+function getInlineImageSizePt(imageContent: ExportImageContent, lineHeightPt: number): InlineImageSizePt {
   // 图片原始宽度（pt）。
   const naturalWidthPt = imageContent.widthPx * CSS_PT_PER_PX;
   // 图片原始高度（pt）。
@@ -65,6 +108,24 @@ function getInlineImageSizePt(imageContent: ExportImageContent, lineHeightPt: nu
     widthPt: naturalWidthPt * imageScale,
     heightPt: naturalHeightPt * imageScale,
   };
+}
+
+/** 计算行内内容行起始 x 坐标。 */
+function getInlineLineLeftPt(
+  textAlign: ExportTextBlockStyle["textAlign"],
+  lineLeftPt: number,
+  lineRightPt: number,
+  lineWidthPt: number,
+): number {
+  // 行内内容可用宽度。
+  const availableWidthPt = lineRightPt - lineLeftPt;
+  if (textAlign === "center") {
+    return lineLeftPt + Math.max((availableWidthPt - lineWidthPt) / 2, 0);
+  }
+  if (textAlign === "right") {
+    return lineLeftPt + Math.max(availableWidthPt - lineWidthPt, 0);
+  }
+  return lineLeftPt;
 }
 
 /** 写入含行内公式的混合内容块。 */
@@ -98,84 +159,119 @@ export function writeInlineContentTextBlock(
   const lineLeftPt = cursor.leftPt + listTextIndentPt + listContentSlotWidthPt;
   // 行结束 x 坐标。
   const lineRightPt = cursor.leftPt + cursor.contentWidthPt;
-  // 当前 x 坐标。
-  let currentXPt = lineLeftPt;
-  // 是否为首行。
-  let isFirstLine = true;
+  // 行可用宽度。
+  const lineWidthPt = lineRightPt - lineLeftPt;
+  // 已收集的行内内容行。
+  const inlineLines: InlineContentLine[] = [{ items: [], widthPt: 0 }];
+  // 当前收集行。
+  let currentLine = inlineLines[0];
 
-  /** 写入新行。 */
-  function startNewLine(): void {
-    cursor.yPt += style.lineHeightPt;
-    currentXPt = lineLeftPt;
-    isFirstLine = false;
+  /** 开始收集新行。 */
+  function startNewInlineLine(): void {
+    // 新行内容。
+    const newLine: InlineContentLine = { items: [], widthPt: 0 };
+    inlineLines.push(newLine);
+    currentLine = newLine;
   }
 
-  /** 确保当前行可写，并绘制列表标记。 */
-  function ensureWritableLine(): void {
-    ensureLineSpace(pdf, cursor, style.lineHeightPt);
-    if (isFirstLine && listMarker) {
-      pdf.text(listMarker, cursor.leftPt + listTextIndentPt, cursor.yPt);
+  /** 追加文本行项目。 */
+  function appendTextLineItem(text: string, widthPt: number): void {
+    // 前一个行项目。
+    const previousItem = currentLine.items[currentLine.items.length - 1];
+    if (previousItem?.type === "text") {
+      previousItem.text += text;
+      previousItem.widthPt += widthPt;
+    } else {
+      currentLine.items.push({ type: "text", text, widthPt });
     }
-    if (isFirstLine && taskListMarker) {
-      drawTaskListMarker(pdf, taskListMarker, cursor.leftPt + listTextIndentPt, cursor.yPt, taskMarkerSizePt);
-    }
+    currentLine.widthPt += widthPt;
   }
 
-  /** 写入文本片段。 */
-  function writeTextRun(text: string): void {
+  /** 追加图片行项目。 */
+  function appendImageLineItem(imageContent: ExportImageContent, imageSize: InlineImageSizePt): void {
+    currentLine.items.push({
+      type: "image",
+      imageContent,
+      imageSize,
+      widthPt: imageSize.widthPt,
+    });
+    currentLine.widthPt += imageSize.widthPt;
+  }
+
+  /** 收集文本片段。 */
+  function collectTextRun(text: string): void {
     // 待写入字符。
     const characters = Array.from(text);
     characters.forEach((character) => {
-      if (!character.trim() && currentXPt === lineLeftPt) {
+      if (!character.trim() && currentLine.widthPt === 0) {
         return;
       }
       // 当前字符宽度。
       const characterWidthPt = pdf.getTextWidth(character);
-      if (currentXPt > lineLeftPt && currentXPt + characterWidthPt > lineRightPt) {
-        startNewLine();
+      if (currentLine.widthPt > 0 && currentLine.widthPt + characterWidthPt > lineWidthPt) {
+        startNewInlineLine();
       }
-      ensureWritableLine();
-      pdf.text(character, currentXPt, cursor.yPt);
-      currentXPt += characterWidthPt;
+      appendTextLineItem(character, characterWidthPt);
     });
   }
 
-  /** 写入图片片段。 */
-  function writeImageRun(imageContent: ExportImageContent): void {
+  /** 收集图片片段。 */
+  function collectImageRun(imageContent: ExportImageContent): void {
     // 行内图片尺寸。
     const imageSize = getInlineImageSizePt(imageContent, style.lineHeightPt);
-    if (currentXPt > lineLeftPt && currentXPt + imageSize.widthPt > lineRightPt) {
-      startNewLine();
+    if (currentLine.widthPt > 0 && currentLine.widthPt + imageSize.widthPt > lineWidthPt) {
+      startNewInlineLine();
     }
-    ensureWritableLine();
-    // 图片顶部 y 坐标。
-    const imageTopPt = cursor.yPt - imageSize.heightPt * INLINE_IMAGE_BASELINE_RATIO;
-    pdf.addImage(imageContent.dataUrl, "PNG", currentXPt, imageTopPt, imageSize.widthPt, imageSize.heightPt);
-    currentXPt += imageSize.widthPt;
+    appendImageLineItem(imageContent, imageSize);
   }
 
-  /** 写入策略中的图片片段。 */
-  function writeMappedImageRun(run: ExportInlineContentRun): void {
+  /** 收集策略中的图片片段。 */
+  function collectMappedImageRun(run: ExportInlineContentRun): void {
     if (run.type === "image") {
-      writeImageRun(run.imageContent);
+      collectImageRun(run.imageContent);
     }
   }
 
-  /** 写入策略中的文本片段。 */
-  function writeMappedTextRun(run: ExportInlineContentRun): void {
+  /** 收集策略中的文本片段。 */
+  function collectMappedTextRun(run: ExportInlineContentRun): void {
     if (run.type === "text") {
-      writeTextRun(run.text);
+      collectTextRun(run.text);
     }
   }
 
-  // 行内片段写入策略。
-  const runWriterMap: Record<ExportInlineContentRun["type"], (run: ExportInlineContentRun) => void> = {
-    image: writeMappedImageRun,
-    text: writeMappedTextRun,
+  // 行内片段收集策略。
+  const runCollectorMap: Record<ExportInlineContentRun["type"], (run: ExportInlineContentRun) => void> = {
+    image: collectMappedImageRun,
+    text: collectMappedTextRun,
   };
 
   inlineContent.forEach((run) => {
-    runWriterMap[run.type](run);
+    runCollectorMap[run.type](run);
   });
-  cursor.yPt += style.lineHeightPt + style.marginBottomPt;
+
+  // 可写入的行内内容行。
+  const printableLines = inlineLines.filter((line) => line.items.length > 0);
+  printableLines.forEach((line, lineIndex) => {
+    ensureLineSpace(pdf, cursor, style.lineHeightPt);
+    if (lineIndex === 0 && listMarker) {
+      pdf.text(listMarker, cursor.leftPt + listTextIndentPt, cursor.yPt);
+    }
+    if (lineIndex === 0 && taskListMarker) {
+      drawTaskListMarker(pdf, taskListMarker, cursor.leftPt + listTextIndentPt, cursor.yPt, taskMarkerSizePt);
+    }
+    // 当前行写入 x 坐标。
+    let currentXPt = getInlineLineLeftPt(style.textAlign, lineLeftPt, lineRightPt, line.widthPt);
+    line.items.forEach((item) => {
+      if (item.type === "text") {
+        pdf.text(item.text, currentXPt, cursor.yPt);
+      } else {
+        // 图片顶部 y 坐标。
+        const imageTopPt = cursor.yPt - item.imageSize.heightPt * INLINE_IMAGE_BASELINE_RATIO;
+        pdf.addImage(item.imageContent.dataUrl, "PNG", currentXPt, imageTopPt, item.imageSize.widthPt, item.imageSize.heightPt);
+      }
+      currentXPt += item.widthPt;
+    });
+    cursor.yPt += style.lineHeightPt;
+  });
+  cursor.yPt += style.marginBottomPt;
 }

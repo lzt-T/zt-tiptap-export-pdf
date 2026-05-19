@@ -20,6 +20,8 @@ export interface ExportTextBlockStyle {
   paddingXPt?: number;
   /** 纵向内边距（pt）。 */
   paddingYPt?: number;
+  /** 文本水平对齐。 */
+  textAlign: "left" | "center" | "right" | "justify";
   /** PDF 字体样式。 */
   fontStyle: "normal";
 }
@@ -66,6 +68,8 @@ export interface ExportImageContent {
   widthPx: number;
   /** 图片对应的 CSS 高度（px）。 */
   heightPx: number;
+  /** 图片水平对齐。 */
+  align?: "left" | "center" | "right";
 }
 
 /** 导出行内内容片段。 */

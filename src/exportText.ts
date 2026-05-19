@@ -9,6 +9,18 @@ import {
 } from "./exportConstants";
 import { type ExportTextBlockStyle } from "./exportTypes";
 
+// 支持导出的文本水平对齐值。
+const EXPORT_TEXT_ALIGN_VALUES = ["left", "center", "right", "justify"] as const;
+
+/** 解析文本水平对齐值，非法值回退为 left。 */
+function resolveTextAlign(computedStyle: CSSStyleDeclaration): ExportTextBlockStyle["textAlign"] {
+  // CSS 文本水平对齐值。
+  const textAlign = computedStyle.textAlign;
+  return EXPORT_TEXT_ALIGN_VALUES.includes(textAlign as ExportTextBlockStyle["textAlign"])
+    ? (textAlign as ExportTextBlockStyle["textAlign"])
+    : "left";
+}
+
 /** 解析 CSS 字号值（如 16px）。 */
 export function parsePxValue(value: string): number {
   // 解析后的数值。
@@ -49,6 +61,8 @@ export function getTextBlockStyle(element: HTMLElement, bodyFontSizePx: number):
   const tagName = element.tagName.toLowerCase();
   // 节点计算样式。
   const computedStyle = window.getComputedStyle(element);
+  // 文本水平对齐。
+  const textAlign = resolveTextAlign(computedStyle);
   // 原始字号（px）。
   const elementFontSizePx = parsePxValue(computedStyle.fontSize) || bodyFontSizePx;
   if (isHeadingTagName(tagName)) {
@@ -60,6 +74,7 @@ export function getTextBlockStyle(element: HTMLElement, bodyFontSizePx: number):
       fontSizePt: headingFontSizePt,
       lineHeightPt: headingFontSizePt * Number.parseFloat(headingStyle.lineHeight),
       marginBottomPt: headingStyle.marginBottomPt,
+      textAlign,
       fontStyle: "normal",
     };
   }
@@ -85,6 +100,7 @@ export function getTextBlockStyle(element: HTMLElement, bodyFontSizePx: number):
     indentLeftPt,
     paddingXPt,
     paddingYPt,
+    textAlign,
     fontStyle: "normal",
   };
 }
