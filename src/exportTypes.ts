@@ -24,7 +24,35 @@ export interface ExportTextBlockStyle {
 export type ExportTaskListMarker = "unchecked" | "checked";
 
 /** 导出文本块类型。 */
-export type ExportTextBlockType = "blockquote";
+export type ExportTextBlockType = "blockquote" | "table";
+
+/** 表格单元格。 */
+export interface ExportTableCell {
+  /** 单元格文本。 */
+  text: string;
+  /** 横向合并列数。 */
+  colSpan: number;
+  /** 纵向合并行数。 */
+  rowSpan: number;
+  /** 水平对齐。 */
+  textAlign: "left" | "center" | "right";
+  /** 垂直对齐。 */
+  verticalAlign: "top" | "middle" | "bottom";
+}
+
+/** 表格行。 */
+export interface ExportTableRow {
+  /** 当前行单元格列表。 */
+  cells: ExportTableCell[];
+  /** 是否为表头行。 */
+  isHeaderRow: boolean;
+}
+
+/** 表格内容。 */
+export interface ExportTableContent {
+  /** 表格行列表。 */
+  rows: ExportTableRow[];
+}
 
 /** 导出文本块内容。 */
 export interface ExportTextBlockContent {
@@ -32,6 +60,8 @@ export interface ExportTextBlockContent {
   text: string;
   /** 文本块类型。 */
   blockType?: ExportTextBlockType;
+  /** 表格内容。 */
+  tableContent?: ExportTableContent;
   /** 任务列表标记。 */
   taskListMarker?: ExportTaskListMarker;
   /** 列表项前缀文本（如 1. / a. / i. / •）。 */

@@ -129,6 +129,7 @@ export async function exportEditorToPdf(
         text: blockContent.text,
         style: blockStyle,
         fontFamily: resolvedFontFamily,
+        tableContent: blockContent.tableContent,
         taskListMarker: blockContent.taskListMarker,
         listMarker: blockContent.listMarker,
         listIndentPt: blockContent.listIndentPt,
