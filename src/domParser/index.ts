@@ -1,10 +1,12 @@
 import { getExportBlockElements } from "./blockCollector";
 import { getBlockExportContent as parseBlockExportContent } from "./contentParser";
 import {
+  getInlineContentBlockContent,
   getFormulaImageBlockContent,
   getInlineFormulaBlockContent,
   hasInlineFormulaRenderElement,
   isBlockFormulaRenderElement,
+  isInlineContentExportElement,
 } from "./formulaParser";
 import { getImageBlockExportContent, isImageExportElement } from "./imageParser";
 
@@ -30,12 +32,14 @@ export function resolveProseMirrorElement(rootElement: HTMLElement): HTMLElement
 
 export { getExportBlockElements };
 export {
+  getInlineContentBlockContent,
   getFormulaImageBlockContent,
   getImageBlockExportContent,
   getInlineFormulaBlockContent,
   hasInlineFormulaRenderElement,
   isBlockFormulaRenderElement,
   isImageExportElement,
+  isInlineContentExportElement,
 };
 
 /** 读取块级节点导出内容。 */

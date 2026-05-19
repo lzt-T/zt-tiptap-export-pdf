@@ -5,6 +5,8 @@ import { BUILTIN_CHINESE_FONT_BASE64 } from "./fonts/builtinChineseFontBase64";
 const BUILTIN_FONT_FILE_NAME = "NotoSansSC-VF.ttf";
 /** 内置字体的 PDF 字体族名称。 */
 export const BUILTIN_FONT_FAMILY = "NotoSansSC";
+/** 内置字体注册到 jsPDF 的样式列表。 */
+const BUILTIN_FONT_STYLES = ["normal", "bold", "italic", "bolditalic"] as const;
 /** 导出时字体加载参考字号（px）。 */
 const EXPORT_FONT_LOAD_SIZE_PX = 16;
 /** 内置字体 data URL 前缀。 */
@@ -20,6 +22,7 @@ async function ensureBrowserBuiltinFontRegistered(fontFamily: string): Promise<v
   if (fontFamily !== BUILTIN_FONT_FAMILY || typeof FontFace === "undefined") {
     return;
   }
+  // 浏览器字体集合。
   const fontSet = document.fonts;
   if (!fontSet) {
     return;
@@ -48,7 +51,9 @@ export function ensureBuiltinChineseFontRegistered(pdf: jsPDF): void {
   if (!pdf.existsFileInVFS(BUILTIN_FONT_FILE_NAME)) {
     pdf.addFileToVFS(BUILTIN_FONT_FILE_NAME, BUILTIN_CHINESE_FONT_BASE64);
   }
-  pdf.addFont(BUILTIN_FONT_FILE_NAME, BUILTIN_FONT_FAMILY, "normal");
+  BUILTIN_FONT_STYLES.forEach((fontStyle) => {
+    pdf.addFont(BUILTIN_FONT_FILE_NAME, BUILTIN_FONT_FAMILY, fontStyle);
+  });
 }
 
 /**
@@ -56,6 +61,7 @@ export function ensureBuiltinChineseFontRegistered(pdf: jsPDF): void {
  */
 export async function waitForFontReady(fontFamily: string): Promise<void> {
   await ensureBrowserBuiltinFontRegistered(fontFamily);
+  // 浏览器字体集合。
   const fontSet = document.fonts;
   if (!fontSet) {
     return;

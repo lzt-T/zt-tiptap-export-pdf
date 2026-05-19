@@ -14,11 +14,13 @@ import {
   getElementRenderWidthPx,
   getExportBlockElements,
   getFormulaImageBlockContent,
+  getInlineContentBlockContent,
   getImageBlockExportContent,
   getInlineFormulaBlockContent,
   hasInlineFormulaRenderElement,
   isBlockFormulaRenderElement,
   isImageExportElement,
+  isInlineContentExportElement,
   resolveProseMirrorElement,
 } from "./domParser";
 import { writeTextBlock } from "./pdfWriter";
@@ -131,7 +133,9 @@ export async function exportEditorToPdf(
           ? await getImageBlockExportContent(blockElement)
           : hasInlineFormulaRenderElement(blockElement)
             ? await getInlineFormulaBlockContent(blockElement)
-            : getBlockExportContent(blockElement, exportRootElement);
+            : isInlineContentExportElement(blockElement)
+              ? await getInlineContentBlockContent(blockElement)
+              : getBlockExportContent(blockElement, exportRootElement);
       if (!blockContent.text) {
         continue;
       }

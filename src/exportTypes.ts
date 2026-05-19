@@ -72,6 +72,22 @@ export interface ExportImageContent {
   align?: "left" | "center" | "right";
 }
 
+/** 导出行内文本样式。 */
+export interface ExportInlineTextStyle {
+  /** 是否加粗。 */
+  bold?: boolean;
+  /** 是否斜体。 */
+  italic?: boolean;
+  /** 是否下划线。 */
+  underline?: boolean;
+  /** 是否删除线。 */
+  strike?: boolean;
+  /** 是否行内代码。 */
+  code?: boolean;
+  /** 链接地址。 */
+  linkHref?: string;
+}
+
 /** 导出行内内容片段。 */
 export type ExportInlineContentRun =
   | {
@@ -79,6 +95,8 @@ export type ExportInlineContentRun =
       type: "text";
       /** 文本内容。 */
       text: string;
+      /** 文本样式。 */
+      style?: ExportInlineTextStyle;
     }
   | {
       /** 片段类型。 */

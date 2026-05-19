@@ -3,6 +3,7 @@ import { CSS_PT_PER_PX } from "../exportConstants";
 import {
   type ExportImageContent,
   type ExportInlineContentRun,
+  type ExportInlineTextStyle,
   type ExportTaskListMarker,
   type ExportTextBlockStyle,
   type PdfWriteCursor,
@@ -22,6 +23,18 @@ const LIST_CONTENT_SLOT_MIN_EM = 1.6;
 const INLINE_IMAGE_MAX_LINE_HEIGHT_RATIO = 0.9;
 // 行内图片基线对齐比例。
 const INLINE_IMAGE_BASELINE_RATIO = 0.82;
+// 行内代码横向内边距比例。
+const INLINE_CODE_PADDING_X_RATIO = 0.35;
+// 行内代码纵向内边距比例。
+const INLINE_CODE_PADDING_Y_RATIO = 0.18;
+// 行内代码背景色。
+const INLINE_CODE_BACKGROUND_COLOR = [241, 245, 249] as const;
+// 链接文本颜色。
+const LINK_TEXT_COLOR = [29, 78, 216] as const;
+// 默认文本颜色。
+const DEFAULT_TEXT_COLOR = [17, 17, 17] as const;
+// 加粗模拟偏移比例。
+const BOLD_SIMULATE_OFFSET_RATIO = 0.018;
 
 /** 行内图片导出尺寸。 */
 interface InlineImageSizePt {
@@ -38,8 +51,12 @@ type InlineLineItem =
       type: "text";
       /** 文本内容。 */
       text: string;
+      /** 文本样式。 */
+      style?: ExportInlineTextStyle;
       /** 项目宽度（pt）。 */
       widthPt: number;
+      /** 纯文本宽度（pt）。 */
+      textWidthPt: number;
     }
   | {
       /** 项目类型。 */
@@ -58,6 +75,18 @@ interface InlineContentLine {
   items: InlineLineItem[];
   /** 当前行宽度（pt）。 */
   widthPt: number;
+}
+
+/** 判断两个行内文本样式是否一致。 */
+function isSameInlineTextStyle(leftStyle?: ExportInlineTextStyle, rightStyle?: ExportInlineTextStyle): boolean {
+  return (
+    Boolean(leftStyle?.bold) === Boolean(rightStyle?.bold) &&
+    Boolean(leftStyle?.italic) === Boolean(rightStyle?.italic) &&
+    Boolean(leftStyle?.underline) === Boolean(rightStyle?.underline) &&
+    Boolean(leftStyle?.strike) === Boolean(rightStyle?.strike) &&
+    Boolean(leftStyle?.code) === Boolean(rightStyle?.code) &&
+    (leftStyle?.linkHref || "") === (rightStyle?.linkHref || "")
+  );
 }
 
 /** 绘制任务列表标记。 */
@@ -128,6 +157,128 @@ function getInlineLineLeftPt(
   return lineLeftPt;
 }
 
+/** 读取行内代码横向内边距。 */
+function getInlineCodePaddingXPt(style: ExportTextBlockStyle, textStyle?: ExportInlineTextStyle): number {
+  return textStyle?.code ? style.fontSizePt * INLINE_CODE_PADDING_X_RATIO : 0;
+}
+
+/** 读取文本片段字体样式。 */
+function getInlineFontStyle(textStyle?: ExportInlineTextStyle): string {
+  if (textStyle?.bold && textStyle.italic) {
+    return "bolditalic";
+  }
+  if (textStyle?.bold) {
+    return "bold";
+  }
+  if (textStyle?.italic) {
+    return "italic";
+  }
+  return "normal";
+}
+
+/** 设置行内文本字体。 */
+function setInlineTextFont(pdf: JsPdfInstance, fontFamily: string, textStyle?: ExportInlineTextStyle): void {
+  try {
+    pdf.setFont(fontFamily, getInlineFontStyle(textStyle));
+  } catch {
+    pdf.setFont(fontFamily, "normal");
+  }
+}
+
+/** 设置行内文本颜色。 */
+function setInlineTextColor(pdf: JsPdfInstance, textStyle?: ExportInlineTextStyle): void {
+  // 文本颜色。
+  const textColor = textStyle?.linkHref ? LINK_TEXT_COLOR : DEFAULT_TEXT_COLOR;
+  pdf.setTextColor(textColor[0], textColor[1], textColor[2]);
+}
+
+/** 绘制行内代码背景。 */
+function drawInlineCodeBackground(
+  pdf: JsPdfInstance,
+  leftPt: number,
+  baselineYPt: number,
+  widthPt: number,
+  style: ExportTextBlockStyle,
+): void {
+  // 背景高度。
+  const backgroundHeightPt = style.fontSizePt + style.fontSizePt * INLINE_CODE_PADDING_Y_RATIO * 2;
+  // 背景顶部坐标。
+  const backgroundTopPt = baselineYPt - style.fontSizePt * 0.82;
+  pdf.setFillColor(INLINE_CODE_BACKGROUND_COLOR[0], INLINE_CODE_BACKGROUND_COLOR[1], INLINE_CODE_BACKGROUND_COLOR[2]);
+  pdf.roundedRect(leftPt, backgroundTopPt, widthPt, backgroundHeightPt, 2, 2, "F");
+}
+
+/** 绘制文本装饰线。 */
+function drawInlineTextDecorations(
+  pdf: JsPdfInstance,
+  textStyle: ExportInlineTextStyle | undefined,
+  textLeftPt: number,
+  baselineYPt: number,
+  textWidthPt: number,
+  blockStyle: ExportTextBlockStyle,
+): void {
+  if (!textStyle?.underline && !textStyle?.strike) {
+    return;
+  }
+  pdf.setDrawColor(textStyle.linkHref ? LINK_TEXT_COLOR[0] : DEFAULT_TEXT_COLOR[0], textStyle.linkHref ? LINK_TEXT_COLOR[1] : DEFAULT_TEXT_COLOR[1], textStyle.linkHref ? LINK_TEXT_COLOR[2] : DEFAULT_TEXT_COLOR[2]);
+  pdf.setLineWidth(Math.max(blockStyle.fontSizePt * 0.04, 0.4));
+  if (textStyle.underline) {
+    // 下划线 y 坐标。
+    const underlineYPt = baselineYPt + blockStyle.fontSizePt * 0.12;
+    pdf.line(textLeftPt, underlineYPt, textLeftPt + textWidthPt, underlineYPt);
+  }
+  if (textStyle.strike) {
+    // 删除线 y 坐标。
+    const strikeYPt = baselineYPt - blockStyle.fontSizePt * 0.32;
+    pdf.line(textLeftPt, strikeYPt, textLeftPt + textWidthPt, strikeYPt);
+  }
+}
+
+/** 写入链接注释。 */
+function writeLinkAnnotation(
+  pdf: JsPdfInstance,
+  textStyle: ExportInlineTextStyle | undefined,
+  textLeftPt: number,
+  baselineYPt: number,
+  textWidthPt: number,
+  blockStyle: ExportTextBlockStyle,
+): void {
+  if (!textStyle?.linkHref) {
+    return;
+  }
+  // 链接区域顶部坐标。
+  const linkTopPt = baselineYPt - blockStyle.fontSizePt * 0.85;
+  pdf.link(textLeftPt, linkTopPt, textWidthPt, blockStyle.lineHeightPt, { url: textStyle.linkHref });
+}
+
+/** 写入行内文本项目。 */
+function writeInlineTextItem(
+  pdf: JsPdfInstance,
+  item: Extract<InlineLineItem, { type: "text" }>,
+  leftPt: number,
+  baselineYPt: number,
+  blockStyle: ExportTextBlockStyle,
+  fontFamily: string,
+): void {
+  // 代码横向内边距。
+  const codePaddingXPt = getInlineCodePaddingXPt(blockStyle, item.style);
+  // 文本起始 x 坐标。
+  const textLeftPt = leftPt + codePaddingXPt;
+  if (item.style?.code) {
+    drawInlineCodeBackground(pdf, leftPt, baselineYPt, item.widthPt, blockStyle);
+  }
+  setInlineTextFont(pdf, fontFamily, item.style);
+  setInlineTextColor(pdf, item.style);
+  pdf.text(item.text, textLeftPt, baselineYPt);
+  if (item.style?.bold) {
+    // 加粗兜底描边。
+    const boldOffsetPt = Math.max(blockStyle.fontSizePt * BOLD_SIMULATE_OFFSET_RATIO, 0.12);
+    pdf.text(item.text, textLeftPt + boldOffsetPt, baselineYPt);
+  }
+  drawInlineTextDecorations(pdf, item.style, textLeftPt, baselineYPt, item.textWidthPt, blockStyle);
+  writeLinkAnnotation(pdf, item.style, textLeftPt, baselineYPt, item.textWidthPt, blockStyle);
+}
+
 /** 写入含行内公式的混合内容块。 */
 export function writeInlineContentTextBlock(
   pdf: JsPdfInstance,
@@ -177,16 +328,23 @@ export function writeInlineContentTextBlock(
   }
 
   /** 追加文本行项目。 */
-  function appendTextLineItem(text: string, widthPt: number): void {
+  function appendTextLineItem(text: string, textWidthPt: number, textStyle?: ExportInlineTextStyle): void {
+    // 代码横向内边距。
+    const codePaddingXPt = getInlineCodePaddingXPt(style, textStyle);
     // 前一个行项目。
     const previousItem = currentLine.items[currentLine.items.length - 1];
-    if (previousItem?.type === "text") {
+    if (previousItem?.type === "text" && isSameInlineTextStyle(previousItem.style, textStyle)) {
       previousItem.text += text;
-      previousItem.widthPt += widthPt;
+      previousItem.widthPt += textWidthPt;
+      previousItem.textWidthPt += textWidthPt;
+      currentLine.widthPt += textWidthPt;
+      return;
     } else {
-      currentLine.items.push({ type: "text", text, widthPt });
+      // 当前项目宽度。
+      const widthPt = textWidthPt + codePaddingXPt * 2;
+      currentLine.items.push({ type: "text", text, style: textStyle, widthPt, textWidthPt });
+      currentLine.widthPt += widthPt;
     }
-    currentLine.widthPt += widthPt;
   }
 
   /** 追加图片行项目。 */
@@ -201,7 +359,8 @@ export function writeInlineContentTextBlock(
   }
 
   /** 收集文本片段。 */
-  function collectTextRun(text: string): void {
+  function collectTextRun(text: string, textStyle?: ExportInlineTextStyle): void {
+    setInlineTextFont(pdf, fontFamily, textStyle);
     // 待写入字符。
     const characters = Array.from(text);
     characters.forEach((character) => {
@@ -210,10 +369,17 @@ export function writeInlineContentTextBlock(
       }
       // 当前字符宽度。
       const characterWidthPt = pdf.getTextWidth(character);
-      if (currentLine.widthPt > 0 && currentLine.widthPt + characterWidthPt > lineWidthPt) {
+      // 前一个行项目。
+      const previousItem = currentLine.items[currentLine.items.length - 1];
+      // 当前字符额外宽度。
+      const characterExtraWidthPt =
+        previousItem?.type === "text" && isSameInlineTextStyle(previousItem.style, textStyle)
+          ? 0
+          : getInlineCodePaddingXPt(style, textStyle) * 2;
+      if (currentLine.widthPt > 0 && currentLine.widthPt + characterWidthPt + characterExtraWidthPt > lineWidthPt) {
         startNewInlineLine();
       }
-      appendTextLineItem(character, characterWidthPt);
+      appendTextLineItem(character, characterWidthPt, textStyle);
     });
   }
 
@@ -237,7 +403,7 @@ export function writeInlineContentTextBlock(
   /** 收集策略中的文本片段。 */
   function collectMappedTextRun(run: ExportInlineContentRun): void {
     if (run.type === "text") {
-      collectTextRun(run.text);
+      collectTextRun(run.text, run.style);
     }
   }
 
@@ -255,6 +421,8 @@ export function writeInlineContentTextBlock(
   const printableLines = inlineLines.filter((line) => line.items.length > 0);
   printableLines.forEach((line, lineIndex) => {
     ensureLineSpace(pdf, cursor, style.lineHeightPt);
+    pdf.setFont(fontFamily, style.fontStyle);
+    pdf.setTextColor(DEFAULT_TEXT_COLOR[0], DEFAULT_TEXT_COLOR[1], DEFAULT_TEXT_COLOR[2]);
     if (lineIndex === 0 && listMarker) {
       pdf.text(listMarker, cursor.leftPt + blockIndentLeftPt + listTextIndentPt, cursor.yPt);
     }
@@ -271,7 +439,7 @@ export function writeInlineContentTextBlock(
     let currentXPt = getInlineLineLeftPt(style.textAlign, lineLeftPt, lineRightPt, line.widthPt);
     line.items.forEach((item) => {
       if (item.type === "text") {
-        pdf.text(item.text, currentXPt, cursor.yPt);
+        writeInlineTextItem(pdf, item, currentXPt, cursor.yPt, style, fontFamily);
       } else {
         // 图片顶部 y 坐标。
         const imageTopPt = cursor.yPt - item.imageSize.heightPt * INLINE_IMAGE_BASELINE_RATIO;
@@ -281,5 +449,7 @@ export function writeInlineContentTextBlock(
     });
     cursor.yPt += style.lineHeightPt;
   });
+  pdf.setFont(fontFamily, style.fontStyle);
+  pdf.setTextColor(DEFAULT_TEXT_COLOR[0], DEFAULT_TEXT_COLOR[1], DEFAULT_TEXT_COLOR[2]);
   cursor.yPt += style.marginBottomPt;
 }
