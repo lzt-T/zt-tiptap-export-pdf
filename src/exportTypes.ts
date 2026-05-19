@@ -16,6 +16,10 @@ export interface ExportTextBlockStyle {
   marginBottomPt: number;
   /** 左侧缩进（pt）。 */
   indentLeftPt?: number;
+  /** 横向内边距（pt）。 */
+  paddingXPt?: number;
+  /** 纵向内边距（pt）。 */
+  paddingYPt?: number;
   /** PDF 字体样式。 */
   fontStyle: "normal";
 }

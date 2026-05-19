@@ -74,11 +74,17 @@ export function getTextBlockStyle(element: HTMLElement, bodyFontSizePx: number):
     tagName === "blockquote"
       ? pxToPt(parsePxValue(computedStyle.paddingLeft)) || DEFAULT_BLOCKQUOTE_INDENT_PT
       : undefined;
+  // 代码块横向内边距（pt）。
+  const paddingXPt = tagName === "pre" ? pxToPt(parsePxValue(computedStyle.paddingLeft)) : undefined;
+  // 代码块纵向内边距（pt）。
+  const paddingYPt = tagName === "pre" ? pxToPt(parsePxValue(computedStyle.paddingTop)) : undefined;
   return {
     fontSizePt,
     lineHeightPt: fontSizePt * lineHeightFactor,
     marginBottomPt,
     indentLeftPt,
+    paddingXPt,
+    paddingYPt,
     fontStyle: "normal",
   };
 }

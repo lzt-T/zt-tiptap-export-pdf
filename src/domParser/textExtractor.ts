@@ -60,7 +60,7 @@ export function getBlockquoteText(element: HTMLElement): string {
 /** 读取代码块文本，保留换行与前导空格。 */
 export function getCodeBlockText(element: HTMLElement): string {
   // 代码块原始文本。
-  const rawText = (element.textContent || "").replace(/\r\n/g, "\n");
+  const rawText = (element.textContent || "").replace(/\r\n?/g, "\n");
   // 代码行列表。
   const lines = rawText.split("\n");
   // 首个非空行索引。
