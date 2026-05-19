@@ -1,4 +1,4 @@
-import { type HTMLFontFace, type jsPDF } from "jspdf";
+import { type jsPDF } from "jspdf";
 import { BUILTIN_CHINESE_FONT_BASE64 } from "./fonts/builtinChineseFontBase64";
 
 /** 内置字体在 VFS 中的文件名。 */
@@ -10,46 +10,52 @@ const EXPORT_FONT_LOAD_SIZE_PX = 16;
 /** 内置字体 data URL 前缀。 */
 const BUILTIN_FONT_DATA_URL_PREFIX = "data:font/ttf;base64,";
 
-/** 标记是否已完成字体注册，避免重复注入。 */
-let hasRegisteredBuiltinFont = false;
+/** 浏览器内置字体注册任务，避免并发导出时重复加载。 */
+let browserBuiltinFontRegisterTask: Promise<void> | null = null;
 
 /**
- * 确保内置中文字体已注册到当前 jsPDF 运行时。
- * 说明：
- * - addFileToVFS / addFont 注册在全局字体缓存，注册一次即可复用。
+ * 确保内置中文字体已注册到浏览器字体系统。
  */
-export function ensureBuiltinChineseFontRegistered(pdf: jsPDF): void {
-  if (hasRegisteredBuiltinFont) {
+async function ensureBrowserBuiltinFontRegistered(fontFamily: string): Promise<void> {
+  if (fontFamily !== BUILTIN_FONT_FAMILY || typeof FontFace === "undefined") {
     return;
   }
-  pdf.addFileToVFS(BUILTIN_FONT_FILE_NAME, BUILTIN_CHINESE_FONT_BASE64);
-  pdf.addFont(BUILTIN_FONT_FILE_NAME, BUILTIN_FONT_FAMILY, "normal");
-  hasRegisteredBuiltinFont = true;
+  const fontSet = document.fonts;
+  if (!fontSet) {
+    return;
+  }
+  if (!browserBuiltinFontRegisterTask) {
+    browserBuiltinFontRegisterTask = (async () => {
+      /** 可写字体集合，兼容当前 DOM 类型声明缺少 add 的情况。 */
+      const writableFontSet = fontSet as FontFaceSet & { add(font: FontFace): void };
+      /** 浏览器字体对象，用于让离屏 DOM 按内置字体排版。 */
+      const browserFontFace = new FontFace(
+        BUILTIN_FONT_FAMILY,
+        `url(${BUILTIN_FONT_DATA_URL_PREFIX}${BUILTIN_CHINESE_FONT_BASE64}) format("truetype")`,
+        { style: "normal", weight: "400" },
+      );
+      await browserFontFace.load();
+      writableFontSet.add(browserFontFace);
+    })();
+  }
+  await browserBuiltinFontRegisterTask;
 }
 
 /**
- * 构建供 jsPDF.html 使用的字体声明，确保 html 渲染链路稳定命中中文字体。
+ * 确保内置中文字体已注册到当前 jsPDF 运行时。
  */
-export function buildHtmlFontFaces(fontFamily: string): HTMLFontFace[] {
-  return [
-    {
-      family: fontFamily,
-      style: "normal",
-      weight: "400",
-      src: [
-        {
-          url: `${BUILTIN_FONT_DATA_URL_PREFIX}${BUILTIN_CHINESE_FONT_BASE64}`,
-          format: "truetype",
-        },
-      ],
-    },
-  ];
+export function ensureBuiltinChineseFontRegistered(pdf: jsPDF): void {
+  if (!pdf.existsFileInVFS(BUILTIN_FONT_FILE_NAME)) {
+    pdf.addFileToVFS(BUILTIN_FONT_FILE_NAME, BUILTIN_CHINESE_FONT_BASE64);
+  }
+  pdf.addFont(BUILTIN_FONT_FILE_NAME, BUILTIN_FONT_FAMILY, "normal");
 }
 
 /**
  * 等待字体在浏览器字体系统中就绪，降低 html 渲染链路的字体回退概率。
  */
 export async function waitForFontReady(fontFamily: string): Promise<void> {
+  await ensureBrowserBuiltinFontRegistered(fontFamily);
   const fontSet = document.fonts;
   if (!fontSet) {
     return;
