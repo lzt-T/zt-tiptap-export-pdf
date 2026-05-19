@@ -14,8 +14,8 @@ import {
   getElementRenderWidthPx,
   getExportBlockElements,
   resolveProseMirrorElement,
-} from "./exportDom";
-import { writeTextBlock } from "./exportPdfWriter";
+} from "./domParser";
+import { writeTextBlock } from "./pdfWriter";
 import { getTextBlockStyle, parsePxValue } from "./exportText";
 import { type ExportEditorToPdfOptions, type PdfWriteCursor } from "./exportTypes";
 import { ensureBuiltinChineseFontRegistered, waitForFontReady } from "./font";

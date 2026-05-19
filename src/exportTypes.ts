@@ -24,7 +24,7 @@ export interface ExportTextBlockStyle {
 export type ExportTaskListMarker = "unchecked" | "checked";
 
 /** 导出文本块类型。 */
-export type ExportTextBlockType = "blockquote" | "table";
+export type ExportTextBlockType = "blockquote" | "table" | "code";
 
 /** 表格单元格。 */
 export interface ExportTableCell {

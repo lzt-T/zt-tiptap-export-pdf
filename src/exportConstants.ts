@@ -28,6 +28,12 @@ export const DEFAULT_BLOCKQUOTE_INDENT_PT = 14;
 export const BLOCKQUOTE_LINE_GAP_PT = 8;
 // 引用块左侧竖线宽度（pt）。
 export const BLOCKQUOTE_LINE_WIDTH_PT = 1;
+// 代码块背景灰度值。
+export const CODE_BLOCK_FILL_GRAY = 240;
+// 代码块左右内边距（pt）。
+export const CODE_BLOCK_PADDING_X_PT = 8;
+// 代码块上下内边距（pt）。
+export const CODE_BLOCK_PADDING_Y_PT = 6;
 // 列表项前缀。
 export const LIST_ITEM_PREFIX = "• ";
 // 优先作为行尾断点的字符。
