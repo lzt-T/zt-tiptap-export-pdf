@@ -1,7 +1,11 @@
+import { isImageExportElement } from "./imageParser";
+
 // 块级公式节点选择器。
 const BLOCK_MATH_SELECTOR = '.tiptap-mathematics-render[data-type="block-math"]';
+// 图片节点选择器。
+const IMAGE_SELECTOR = ".image-node-wrapper,figure,img[src]";
 // 支持导出的块级节点选择器。
-const EXPORT_BLOCK_SELECTOR = `h1,h2,h3,h4,h5,h6,p,li,blockquote,pre,table,${BLOCK_MATH_SELECTOR}`;
+const EXPORT_BLOCK_SELECTOR = `h1,h2,h3,h4,h5,h6,p,li,blockquote,pre,table,${BLOCK_MATH_SELECTOR},${IMAGE_SELECTOR}`;
 
 /** 判断是否为支持的块级导出节点。 */
 function isExportBlockElement(element: Element): element is HTMLElement {
@@ -9,7 +13,8 @@ function isExportBlockElement(element: Element): element is HTMLElement {
   const tagName = element.tagName.toLowerCase();
   return (
     ["h1", "h2", "h3", "h4", "h5", "h6", "p", "li", "blockquote", "pre", "table"].includes(tagName) ||
-    element.matches(BLOCK_MATH_SELECTOR)
+    element.matches(BLOCK_MATH_SELECTOR) ||
+    (element instanceof HTMLElement && isImageExportElement(element))
   );
 }
 
@@ -27,6 +32,13 @@ function isNestedInTable(element: HTMLElement): boolean {
   return closestTable instanceof HTMLTableElement && closestTable !== element;
 }
 
+/** 判断图片节点是否已由外层图片块承载。 */
+function isNestedInImageBlock(element: HTMLElement): boolean {
+  // 最近的图片块节点。
+  const closestImageBlock = element.closest(".image-node-wrapper,figure");
+  return closestImageBlock instanceof HTMLElement && closestImageBlock !== element;
+}
+
 /** 获取需要导出的块级节点列表。 */
 export function getExportBlockElements(rootElement: HTMLElement): HTMLElement[] {
   // 根节点自身的块级节点。
@@ -38,6 +50,7 @@ export function getExportBlockElements(rootElement: HTMLElement): HTMLElement[] 
       element instanceof HTMLElement &&
       isExportBlockElement(element) &&
       !isNestedInListItem(element) &&
-      !isNestedInTable(element),
+      !isNestedInTable(element) &&
+      !isNestedInImageBlock(element),
   );
 }

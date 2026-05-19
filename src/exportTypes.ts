@@ -93,6 +93,8 @@ export interface ExportTextBlockContent {
   tableContent?: ExportTableContent;
   /** 图片内容。 */
   imageContent?: ExportImageContent;
+  /** 图片说明文本。 */
+  imageCaptionText?: string;
   /** 行内混合内容。 */
   inlineContent?: ExportInlineContentRun[];
   /** 任务列表标记。 */

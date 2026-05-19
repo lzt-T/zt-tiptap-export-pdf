@@ -14,9 +14,11 @@ import {
   getElementRenderWidthPx,
   getExportBlockElements,
   getFormulaImageBlockContent,
+  getImageBlockExportContent,
   getInlineFormulaBlockContent,
   hasInlineFormulaRenderElement,
   isBlockFormulaRenderElement,
+  isImageExportElement,
   resolveProseMirrorElement,
 } from "./domParser";
 import { writeTextBlock } from "./pdfWriter";
@@ -125,9 +127,11 @@ export async function exportEditorToPdf(
       // 块级导出内容。
       const blockContent = isBlockFormulaRenderElement(blockElement)
         ? await getFormulaImageBlockContent(blockElement)
-        : hasInlineFormulaRenderElement(blockElement)
-          ? await getInlineFormulaBlockContent(blockElement)
-          : getBlockExportContent(blockElement, exportRootElement);
+        : isImageExportElement(blockElement)
+          ? await getImageBlockExportContent(blockElement)
+          : hasInlineFormulaRenderElement(blockElement)
+            ? await getInlineFormulaBlockContent(blockElement)
+            : getBlockExportContent(blockElement, exportRootElement);
       if (!blockContent.text) {
         continue;
       }
@@ -143,6 +147,7 @@ export async function exportEditorToPdf(
         listIndentPt: blockContent.listIndentPt,
         blockType: blockContent.blockType,
         imageContent: blockContent.imageContent,
+        imageCaptionText: blockContent.imageCaptionText,
         inlineContent: blockContent.inlineContent,
       });
     }
