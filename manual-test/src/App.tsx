@@ -38,10 +38,7 @@ export function App() {
   return (
     <main className="ManualTestPage">
       <h1 className="ManualTestPage__Title">{PAGE_TITLE}</h1>
-      <ReactTiptapEditor 
-      
-      editorMode="headless"
-      value={getInitialValue()}  toolbarItems={TOOLBAR_ITEMS} />
+      <ReactTiptapEditor editorMode="headless" value={getInitialValue()} toolbarItems={TOOLBAR_ITEMS} />
     </main>
   );
 }

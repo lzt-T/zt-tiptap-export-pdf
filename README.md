@@ -15,12 +15,14 @@ exportEditorToPdf(
   element: HTMLElement,
   options?: {
     filename?: string
+    fontFamily?: string
   }
 ): Promise<void>
 ```
 
 - `element`：编辑区内容容器（建议仅传正文区域，不含工具栏/弹层）。
 - `options.filename`：导出文件名，默认 `editor.pdf`。
+- `options.fontFamily`：导出时使用的字体族，默认 `NotoSansSC`（内置中文字体）。
 
 ## 基础用法
 
@@ -64,6 +66,9 @@ export default function App() {
 
 - 仅支持浏览器环境。
 - 首版目标是“先可用”，暂不包含页眉页脚、水印和高级打印配置。
+- 内置中文字体会增大产物体积，适用于“中文不乱码、可搜索复制”优先的场景。
+- 为降低“偶发乱码”，导出会在 `html()` 路径显式传入 `fontFaces` 并等待字体就绪。
+- 若通过脚本更新内置字体资源，请输出标准 TS 字符串常量，避免写入模板转义标记导致解析失败。
 
 ## 手工验证（zt-reactjs-tiptap）
 
