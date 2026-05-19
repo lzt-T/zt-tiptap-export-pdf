@@ -76,6 +76,8 @@ export function writeDefaultTextBlock(
 ): void {
   pdf.setFont(fontFamily, style.fontStyle);
   pdf.setFontSize(style.fontSizePt);
+  // 块级左侧缩进。
+  const blockIndentLeftPt = style.indentLeftPt || 0;
   // 列表层级缩进。
   const listTextIndentPt = listIndentPt || 0;
   // 任务列表方框尺寸。
@@ -92,18 +94,24 @@ export function writeDefaultTextBlock(
       ? Math.max(listContentMinSlotWidthPt, listMarkerSlotWidthPt, taskMarkerSlotWidthPt)
       : 0;
   // 文本写入 x 坐标。
-  const textLeftPt = cursor.leftPt + listTextIndentPt + listContentSlotWidthPt;
+  const textLeftPt = cursor.leftPt + blockIndentLeftPt + listTextIndentPt + listContentSlotWidthPt;
   // 文本可用宽度。
-  const textWidthPt = cursor.contentWidthPt - listTextIndentPt - listContentSlotWidthPt;
+  const textWidthPt = cursor.contentWidthPt - blockIndentLeftPt - listTextIndentPt - listContentSlotWidthPt;
   // 可写入文本行。
   const textLines = splitTextToLines(pdf, text, textWidthPt);
   textLines.forEach((textLine, lineIndex) => {
     ensureLineSpace(pdf, cursor, style.lineHeightPt);
     if (listMarker && lineIndex === 0) {
-      pdf.text(listMarker, cursor.leftPt + listTextIndentPt, cursor.yPt);
+      pdf.text(listMarker, cursor.leftPt + blockIndentLeftPt + listTextIndentPt, cursor.yPt);
     }
     if (taskListMarker && lineIndex === 0) {
-      drawTaskListMarker(pdf, taskListMarker, cursor.leftPt + listTextIndentPt, cursor.yPt, taskMarkerSizePt);
+      drawTaskListMarker(
+        pdf,
+        taskListMarker,
+        cursor.leftPt + blockIndentLeftPt + listTextIndentPt,
+        cursor.yPt,
+        taskMarkerSizePt,
+      );
     }
     if (style.textAlign === "justify" && lineIndex < textLines.length - 1) {
       pdf.text(textLine, textLeftPt, cursor.yPt, { align: "justify", maxWidth: textWidthPt });

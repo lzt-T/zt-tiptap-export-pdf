@@ -140,6 +140,8 @@ export function writeInlineContentTextBlock(
 
   pdf.setFont(fontFamily, style.fontStyle);
   pdf.setFontSize(style.fontSizePt);
+  // 块级左侧缩进。
+  const blockIndentLeftPt = style.indentLeftPt || 0;
   // 列表层级缩进。
   const listTextIndentPt = listIndentPt || 0;
   // 任务列表方框尺寸。
@@ -156,7 +158,7 @@ export function writeInlineContentTextBlock(
       ? Math.max(listContentMinSlotWidthPt, listMarkerSlotWidthPt, taskMarkerSlotWidthPt)
       : 0;
   // 行起始 x 坐标。
-  const lineLeftPt = cursor.leftPt + listTextIndentPt + listContentSlotWidthPt;
+  const lineLeftPt = cursor.leftPt + blockIndentLeftPt + listTextIndentPt + listContentSlotWidthPt;
   // 行结束 x 坐标。
   const lineRightPt = cursor.leftPt + cursor.contentWidthPt;
   // 行可用宽度。
@@ -254,10 +256,16 @@ export function writeInlineContentTextBlock(
   printableLines.forEach((line, lineIndex) => {
     ensureLineSpace(pdf, cursor, style.lineHeightPt);
     if (lineIndex === 0 && listMarker) {
-      pdf.text(listMarker, cursor.leftPt + listTextIndentPt, cursor.yPt);
+      pdf.text(listMarker, cursor.leftPt + blockIndentLeftPt + listTextIndentPt, cursor.yPt);
     }
     if (lineIndex === 0 && taskListMarker) {
-      drawTaskListMarker(pdf, taskListMarker, cursor.leftPt + listTextIndentPt, cursor.yPt, taskMarkerSizePt);
+      drawTaskListMarker(
+        pdf,
+        taskListMarker,
+        cursor.leftPt + blockIndentLeftPt + listTextIndentPt,
+        cursor.yPt,
+        taskMarkerSizePt,
+      );
     }
     // 当前行写入 x 坐标。
     let currentXPt = getInlineLineLeftPt(style.textAlign, lineLeftPt, lineRightPt, line.widthPt);

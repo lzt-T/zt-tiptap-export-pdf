@@ -11,6 +11,8 @@ import { type ExportTextBlockStyle } from "./exportTypes";
 
 // 支持导出的文本水平对齐值。
 const EXPORT_TEXT_ALIGN_VALUES = ["left", "center", "right", "justify"] as const;
+// 支持读取普通缩进的块级标签。
+const EXPORT_INDENT_TAG_NAMES = ["p", "li", "h1", "h2", "h3", "h4", "h5", "h6"] as const;
 
 /** 解析文本水平对齐值，非法值回退为 left。 */
 function resolveTextAlign(computedStyle: CSSStyleDeclaration): ExportTextBlockStyle["textAlign"] {
@@ -55,6 +57,19 @@ function isHeadingTagName(tagName: string): tagName is keyof typeof EXPORT_HEADI
   return tagName in EXPORT_HEADING_STYLE_MAP;
 }
 
+/** 解析文本块左侧缩进。 */
+function resolveIndentLeftPt(tagName: string, computedStyle: CSSStyleDeclaration): number | undefined {
+  if (tagName === "blockquote") {
+    return pxToPt(parsePxValue(computedStyle.paddingLeft)) || DEFAULT_BLOCKQUOTE_INDENT_PT;
+  }
+  if (!EXPORT_INDENT_TAG_NAMES.includes(tagName as (typeof EXPORT_INDENT_TAG_NAMES)[number])) {
+    return undefined;
+  }
+  // 普通块级节点左侧缩进（pt）。
+  const marginLeftPt = pxToPt(parsePxValue(computedStyle.marginLeft));
+  return marginLeftPt > 0 ? marginLeftPt : undefined;
+}
+
 /** 获取文本块导出样式。 */
 export function getTextBlockStyle(element: HTMLElement, bodyFontSizePx: number): ExportTextBlockStyle {
   // 标签名。
@@ -65,6 +80,8 @@ export function getTextBlockStyle(element: HTMLElement, bodyFontSizePx: number):
   const textAlign = resolveTextAlign(computedStyle);
   // 原始字号（px）。
   const elementFontSizePx = parsePxValue(computedStyle.fontSize) || bodyFontSizePx;
+  // 文本块左侧缩进（pt）。
+  const indentLeftPt = resolveIndentLeftPt(tagName, computedStyle);
   if (isHeadingTagName(tagName)) {
     // 标题固定样式。
     const headingStyle = EXPORT_HEADING_STYLE_MAP[tagName];
@@ -74,6 +91,7 @@ export function getTextBlockStyle(element: HTMLElement, bodyFontSizePx: number):
       fontSizePt: headingFontSizePt,
       lineHeightPt: headingFontSizePt * Number.parseFloat(headingStyle.lineHeight),
       marginBottomPt: headingStyle.marginBottomPt,
+      indentLeftPt,
       textAlign,
       fontStyle: "normal",
     };
@@ -84,11 +102,6 @@ export function getTextBlockStyle(element: HTMLElement, bodyFontSizePx: number):
   const lineHeightFactor = resolveLineHeightFactor(computedStyle, elementFontSizePx);
   // 块后间距（pt）。
   const marginBottomPt = pxToPt(parsePxValue(computedStyle.marginBottom)) || DEFAULT_BLOCK_MARGIN_BOTTOM_PT;
-  // 引用块左侧缩进（pt）。
-  const indentLeftPt =
-    tagName === "blockquote"
-      ? pxToPt(parsePxValue(computedStyle.paddingLeft)) || DEFAULT_BLOCKQUOTE_INDENT_PT
-      : undefined;
   // 代码块横向内边距（pt）。
   const paddingXPt = tagName === "pre" ? pxToPt(parsePxValue(computedStyle.paddingLeft)) : undefined;
   // 代码块纵向内边距（pt）。
