@@ -32,3 +32,7 @@
 ## 源码地址
 
 富文本的源码地址在`D:\selfProjects\zt-reactjs-tiptap`，有什么不同，可以直接读取
+
+## 包管理工具
+
+项目是使用`pnpm`来管理的

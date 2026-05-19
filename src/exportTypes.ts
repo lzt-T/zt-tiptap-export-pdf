@@ -28,7 +28,7 @@ export interface ExportTextBlockStyle {
 export type ExportTaskListMarker = "unchecked" | "checked";
 
 /** 导出文本块类型。 */
-export type ExportTextBlockType = "blockquote" | "table" | "code";
+export type ExportTextBlockType = "blockquote" | "table" | "code" | "image" | "inlineContent";
 
 /** 表格单元格。 */
 export interface ExportTableCell {
@@ -58,6 +58,31 @@ export interface ExportTableContent {
   rows: ExportTableRow[];
 }
 
+/** 导出图片内容。 */
+export interface ExportImageContent {
+  /** 图片 data URL。 */
+  dataUrl: string;
+  /** 图片对应的 CSS 宽度（px）。 */
+  widthPx: number;
+  /** 图片对应的 CSS 高度（px）。 */
+  heightPx: number;
+}
+
+/** 导出行内内容片段。 */
+export type ExportInlineContentRun =
+  | {
+      /** 片段类型。 */
+      type: "text";
+      /** 文本内容。 */
+      text: string;
+    }
+  | {
+      /** 片段类型。 */
+      type: "image";
+      /** 图片内容。 */
+      imageContent: ExportImageContent;
+    };
+
 /** 导出文本块内容。 */
 export interface ExportTextBlockContent {
   /** 文本内容。 */
@@ -66,6 +91,10 @@ export interface ExportTextBlockContent {
   blockType?: ExportTextBlockType;
   /** 表格内容。 */
   tableContent?: ExportTableContent;
+  /** 图片内容。 */
+  imageContent?: ExportImageContent;
+  /** 行内混合内容。 */
+  inlineContent?: ExportInlineContentRun[];
   /** 任务列表标记。 */
   taskListMarker?: ExportTaskListMarker;
   /** 列表项前缀文本（如 1. / a. / i. / •）。 */

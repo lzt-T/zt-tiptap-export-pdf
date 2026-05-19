@@ -3,6 +3,8 @@ import { type ExportTextBlockType, type PdfWriteCursor } from "../exportTypes";
 import { writeBlockquoteTextBlock } from "./blockquoteWriter";
 import { writeCodeTextBlock } from "./codeWriter";
 import { writeDefaultTextBlock } from "./defaultWriter";
+import { writeImageTextBlock } from "./imageWriter";
+import { writeInlineContentTextBlock } from "./inlineContentWriter";
 import { writeTableTextBlock } from "./tableWriter";
 import { type TextBlockWriter, type WriteTextBlockParams } from "./types";
 
@@ -10,6 +12,8 @@ import { type TextBlockWriter, type WriteTextBlockParams } from "./types";
 const TEXT_BLOCK_WRITER_MAP: Record<ExportTextBlockType, TextBlockWriter> = {
   blockquote: writeBlockquoteTextBlock,
   code: writeCodeTextBlock,
+  image: writeImageTextBlock,
+  inlineContent: writeInlineContentTextBlock,
   table: writeTableTextBlock,
 };
 

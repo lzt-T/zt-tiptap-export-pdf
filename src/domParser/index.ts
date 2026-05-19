@@ -1,5 +1,11 @@
 import { getExportBlockElements } from "./blockCollector";
 import { getBlockExportContent as parseBlockExportContent } from "./contentParser";
+import {
+  getFormulaImageBlockContent,
+  getInlineFormulaBlockContent,
+  hasInlineFormulaRenderElement,
+  isBlockFormulaRenderElement,
+} from "./formulaParser";
 
 /** 获取可视宽度（px），优先使用 getBoundingClientRect。 */
 export function getElementRenderWidthPx(element: HTMLElement): number {
@@ -22,6 +28,12 @@ export function resolveProseMirrorElement(rootElement: HTMLElement): HTMLElement
 }
 
 export { getExportBlockElements };
+export {
+  getFormulaImageBlockContent,
+  getInlineFormulaBlockContent,
+  hasInlineFormulaRenderElement,
+  isBlockFormulaRenderElement,
+};
 
 /** 读取块级节点导出内容。 */
 export function getBlockExportContent(element: HTMLElement, exportRootElement: HTMLElement) {

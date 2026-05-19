@@ -13,6 +13,10 @@ import {
   getBlockExportContent,
   getElementRenderWidthPx,
   getExportBlockElements,
+  getFormulaImageBlockContent,
+  getInlineFormulaBlockContent,
+  hasInlineFormulaRenderElement,
+  isBlockFormulaRenderElement,
   resolveProseMirrorElement,
 } from "./domParser";
 import { writeTextBlock } from "./pdfWriter";
@@ -117,11 +121,15 @@ export async function exportEditorToPdf(
     // 需要导出的块级节点。
     const blockElements = getExportBlockElements(exportRootElement);
 
-    blockElements.forEach((blockElement) => {
+    for (const blockElement of blockElements) {
       // 块级导出内容。
-      const blockContent = getBlockExportContent(blockElement, exportRootElement);
+      const blockContent = isBlockFormulaRenderElement(blockElement)
+        ? await getFormulaImageBlockContent(blockElement)
+        : hasInlineFormulaRenderElement(blockElement)
+          ? await getInlineFormulaBlockContent(blockElement)
+          : getBlockExportContent(blockElement, exportRootElement);
       if (!blockContent.text) {
-        return;
+        continue;
       }
       // 块级文本样式。
       const blockStyle = getTextBlockStyle(blockElement, bodyFontSizePx);
@@ -134,8 +142,10 @@ export async function exportEditorToPdf(
         listMarker: blockContent.listMarker,
         listIndentPt: blockContent.listIndentPt,
         blockType: blockContent.blockType,
+        imageContent: blockContent.imageContent,
+        inlineContent: blockContent.inlineContent,
       });
-    });
+    }
 
     pdf.save(resolvedFilename);
   } finally {

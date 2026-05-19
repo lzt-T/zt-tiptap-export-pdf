@@ -1,5 +1,7 @@
 import { type jsPDF as JsPdfInstance } from "jspdf";
 import {
+  type ExportImageContent,
+  type ExportInlineContentRun,
   type ExportTableContent,
   type ExportTaskListMarker,
   type ExportTextBlockStyle,
@@ -25,6 +27,10 @@ export interface WriteTextBlockParams {
   blockType?: ExportTextBlockType;
   /** 表格内容。 */
   tableContent?: ExportTableContent;
+  /** 图片内容。 */
+  imageContent?: ExportImageContent;
+  /** 行内混合内容。 */
+  inlineContent?: ExportInlineContentRun[];
 }
 
 /** 文本块写入器。 */

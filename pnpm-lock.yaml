@@ -11,6 +11,9 @@ importers:
       '@vitejs/plugin-react':
         specifier: ^6.0.2
         version: 6.0.2(vite@8.0.13(jiti@2.7.0))
+      '@zumer/snapdom':
+        specifier: ^2.12.0
+        version: 2.12.0
       jspdf:
         specifier: ^4.2.1
         version: 4.2.1
@@ -1274,6 +1277,9 @@ packages:
         optional: true
       babel-plugin-react-compiler:
         optional: true
+
+  '@zumer/snapdom@2.12.0':
+    resolution: {integrity: sha512-TdLGu+1RkKI3JKfMFvn1gRPD/rl8hrAeN6aFjjd0w7S39nulbd94ChxSlfH7nSCm8kzuQkeWFxIsij4+Mk1RDg==}
 
   aria-hidden@1.2.6:
     resolution: {integrity: sha512-ik3ZgC9dY/lYVVM++OISsaYDeg1tb0VtP5uL3ouh1koGOaUMDPpbFIei4JkFimWUFPn90sbMNMXQAIVOlnYKJA==}
@@ -2981,6 +2987,8 @@ snapshots:
     dependencies:
       '@rolldown/pluginutils': 1.0.1
       vite: 8.0.13(jiti@2.7.0)
+
+  '@zumer/snapdom@2.12.0': {}
 
   aria-hidden@1.2.6:
     dependencies:

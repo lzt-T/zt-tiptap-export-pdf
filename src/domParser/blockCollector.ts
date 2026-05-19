@@ -1,11 +1,16 @@
+// 块级公式节点选择器。
+const BLOCK_MATH_SELECTOR = '.tiptap-mathematics-render[data-type="block-math"]';
 // 支持导出的块级节点选择器。
-const EXPORT_BLOCK_SELECTOR = "h1,h2,h3,h4,h5,h6,p,li,blockquote,pre,table";
+const EXPORT_BLOCK_SELECTOR = `h1,h2,h3,h4,h5,h6,p,li,blockquote,pre,table,${BLOCK_MATH_SELECTOR}`;
 
 /** 判断是否为支持的块级导出节点。 */
 function isExportBlockElement(element: Element): element is HTMLElement {
   // 节点标签名。
   const tagName = element.tagName.toLowerCase();
-  return ["h1", "h2", "h3", "h4", "h5", "h6", "p", "li", "blockquote", "pre", "table"].includes(tagName);
+  return (
+    ["h1", "h2", "h3", "h4", "h5", "h6", "p", "li", "blockquote", "pre", "table"].includes(tagName) ||
+    element.matches(BLOCK_MATH_SELECTOR)
+  );
 }
 
 /** 判断节点是否位于列表项内部，避免 li 内段落重复导出。 */
