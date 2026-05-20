@@ -39,6 +39,13 @@ function isNestedInImageBlock(element: HTMLElement): boolean {
   return closestImageBlock instanceof HTMLElement && closestImageBlock !== element;
 }
 
+/** 判断节点是否位于引用块内部，避免引用内容重复导出。 */
+function isNestedInBlockquote(element: HTMLElement): boolean {
+  // 最近的引用块节点。
+  const closestBlockquote = element.closest("blockquote");
+  return closestBlockquote instanceof HTMLElement && closestBlockquote !== element;
+}
+
 /** 获取需要导出的块级节点列表。 */
 export function getExportBlockElements(rootElement: HTMLElement): HTMLElement[] {
   // 根节点自身的块级节点。
@@ -51,6 +58,7 @@ export function getExportBlockElements(rootElement: HTMLElement): HTMLElement[] 
       isExportBlockElement(element) &&
       !isNestedInListItem(element) &&
       !isNestedInTable(element) &&
-      !isNestedInImageBlock(element),
+      !isNestedInImageBlock(element) &&
+      !isNestedInBlockquote(element),
   );
 }

@@ -12,6 +12,8 @@ const TABLE_BORDER_WIDTH_PT = 0.8;
 const TABLE_HEADER_FILL_GRAY = 243;
 // 表格最小段后间距（pt）。
 const TABLE_MARGIN_BOTTOM_PT = DEFAULT_BLOCK_MARGIN_BOTTOM_PT;
+// 表格后下一段文本首行基线偏移比例。
+const TABLE_NEXT_TEXT_BASELINE_RATIO = 0.8;
 
 /** 表格布局单元格。 */
 interface TableLayoutCell {
@@ -318,5 +320,5 @@ export function writeTableTextBlock(
       cursor.yPt = rowBottomYPt;
     }
   });
-  cursor.yPt += TABLE_MARGIN_BOTTOM_PT;
+  cursor.yPt += TABLE_MARGIN_BOTTOM_PT + style.lineHeightPt * TABLE_NEXT_TEXT_BASELINE_RATIO;
 }

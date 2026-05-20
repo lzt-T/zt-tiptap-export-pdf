@@ -9,6 +9,8 @@ import { type WriteTextBlockParams } from "./types";
 const IMAGE_CAPTION_VISIBLE_TOP_GAP_PT = 8;
 // 图片说明文本与后续内容的底部间距（pt）。
 const IMAGE_CAPTION_BOTTOM_GAP_PT = 10;
+// 无说明图片后下一段文本首行基线偏移比例。
+const IMAGE_NEXT_TEXT_BASELINE_RATIO = 0.8;
 
 /** 计算图片写入 x 坐标。 */
 function getImageLeftPt(imageContent: ExportImageContent, cursor: PdfWriteCursor, imageWidthPt: number): number {
@@ -82,5 +84,7 @@ export function writeImageTextBlock(
     pdf.text(captionLine, captionLeftPt, cursor.yPt);
     cursor.yPt += style.lineHeightPt;
   });
-  cursor.yPt += captionBottomGapPt + style.marginBottomPt;
+  // 无说明图片后的下一段文本基线补偿。
+  const nextTextBaselineGapPt = captionLines.length === 0 ? style.lineHeightPt * IMAGE_NEXT_TEXT_BASELINE_RATIO : 0;
+  cursor.yPt += captionBottomGapPt + style.marginBottomPt + nextTextBaselineGapPt;
 }

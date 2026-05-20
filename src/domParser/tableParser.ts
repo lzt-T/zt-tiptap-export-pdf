@@ -41,6 +41,13 @@ function isNestedInImageBlock(element: HTMLElement): boolean {
   return closestImageBlock instanceof HTMLElement && closestImageBlock !== element;
 }
 
+/** 判断节点是否位于引用块内部。 */
+function isNestedInBlockquote(element: HTMLElement): boolean {
+  // 最近的引用块节点。
+  const closestBlockquote = element.closest("blockquote");
+  return closestBlockquote instanceof HTMLElement && closestBlockquote !== element;
+}
+
 /** 读取当前单元格内可导出的块级节点。 */
 function getTableCellBlockElements(cellElement: HTMLElement): HTMLElement[] {
   // 单元格内候选块级节点。
@@ -51,7 +58,8 @@ function getTableCellBlockElements(cellElement: HTMLElement): HTMLElement[] {
     (blockElement) =>
       !isNestedInInnerTable(blockElement, cellElement) &&
       !isNestedInOtherListItem(blockElement) &&
-      !isNestedInImageBlock(blockElement),
+      !isNestedInImageBlock(blockElement) &&
+      !isNestedInBlockquote(blockElement),
   );
 }
 
