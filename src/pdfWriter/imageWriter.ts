@@ -61,16 +61,21 @@ export function writeImageTextBlock(
   const captionBottomGapPt = captionLines.length > 0 ? IMAGE_CAPTION_BOTTOM_GAP_PT : 0;
   // 图片块整体高度（pt）。
   const blockHeightPt = imageHeightPt + captionBaselineGapPt + captionHeightPt + captionBottomGapPt;
+  // 文本基线偏移（用于将文本流基线换算为块顶坐标）。
+  const textBaselineOffsetPt = style.lineHeightPt * 0.8;
+  // 图片块顶部 y 坐标。
+  let imageBlockTopYPt = Math.max(cursor.yPt - textBaselineOffsetPt, PDF_TOP_MARGIN_PT);
   // 图片写入 x 坐标。
   const imageLeftPt = getImageLeftPt(imageContent, cursor, imageWidthPt);
 
-  if (cursor.yPt + blockHeightPt > cursor.bottomPt) {
+  if (imageBlockTopYPt + blockHeightPt > cursor.bottomPt) {
     pdf.addPage();
     cursor.yPt = PDF_TOP_MARGIN_PT;
+    imageBlockTopYPt = cursor.yPt;
   }
 
-  pdf.addImage(imageContent.dataUrl, "PNG", imageLeftPt, cursor.yPt, imageWidthPt, imageHeightPt);
-  cursor.yPt += imageHeightPt + captionBaselineGapPt;
+  pdf.addImage(imageContent.dataUrl, "PNG", imageLeftPt, imageBlockTopYPt, imageWidthPt, imageHeightPt);
+  cursor.yPt = imageBlockTopYPt + imageHeightPt + captionBaselineGapPt;
   if (captionLines.length > 0) {
     pdf.setFont(fontFamily, style.fontStyle);
     pdf.setFontSize(style.fontSizePt);

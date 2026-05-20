@@ -1,5 +1,5 @@
 import { type jsPDF as JsPdfInstance } from "jspdf";
-import { BLOCKQUOTE_LINE_GAP_PT, BLOCKQUOTE_LINE_WIDTH_PT } from "../exportConstants";
+import { BLOCKQUOTE_LINE_WIDTH_PT } from "../exportConstants";
 import { splitTextToLines } from "../exportText";
 import { type PdfWriteCursor } from "../exportTypes";
 import { ensureLineSpace } from "./shared";
@@ -15,12 +15,10 @@ export function writeBlockquoteTextBlock(
   pdf.setFontSize(style.fontSizePt);
   // 引用块文本左侧缩进（pt）。
   const quoteIndentPt = style.indentLeftPt || 0;
-  // 引用块竖线与文本总缩进（pt）。
-  const quoteTextIndentPt = quoteIndentPt + BLOCKQUOTE_LINE_GAP_PT;
   // 引用块文本写入 x 坐标。
-  const quoteTextLeftPt = cursor.leftPt + quoteTextIndentPt;
+  const quoteTextLeftPt = cursor.leftPt + quoteIndentPt;
   // 引用块文本可用宽度。
-  const quoteTextWidthPt = cursor.contentWidthPt - quoteTextIndentPt;
+  const quoteTextWidthPt = cursor.contentWidthPt - quoteIndentPt;
   // 引用块文本行列表。
   const quoteLines = text.split("\n").flatMap((lineText) => splitTextToLines(pdf, lineText, quoteTextWidthPt));
   quoteLines.forEach((lineText) => {

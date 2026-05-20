@@ -44,16 +44,17 @@ export function writeCodeTextBlock(
   const codeLines = getCodeBlockLines(pdf, text, codeTextWidthPt);
   // 代码块总高度（pt）。
   const codeBlockHeightPt = codeLines.length * style.lineHeightPt + codePaddingYPt * 2;
-  if (cursor.yPt + codeBlockHeightPt > cursor.bottomPt) {
-    pdf.addPage();
-    cursor.yPt = PDF_TOP_MARGIN_PT;
-  }
-  // 代码块背景顶部 y 坐标。
-  const codeBlockTopYPt = cursor.yPt;
-  pdf.setFillColor(CODE_BLOCK_FILL_GRAY, CODE_BLOCK_FILL_GRAY, CODE_BLOCK_FILL_GRAY);
-  pdf.rect(cursor.leftPt, codeBlockTopYPt, cursor.contentWidthPt, codeBlockHeightPt, "F");
   // 文本基线偏移。
   const textBaselineOffsetPt = style.lineHeightPt * 0.8;
+  // 代码块背景顶部 y 坐标（将“当前文本基线”换算为“块顶”坐标）。
+  let codeBlockTopYPt = Math.max(cursor.yPt - textBaselineOffsetPt, PDF_TOP_MARGIN_PT);
+  if (codeBlockTopYPt + codeBlockHeightPt > cursor.bottomPt) {
+    pdf.addPage();
+    cursor.yPt = PDF_TOP_MARGIN_PT;
+    codeBlockTopYPt = cursor.yPt;
+  }
+  pdf.setFillColor(CODE_BLOCK_FILL_GRAY, CODE_BLOCK_FILL_GRAY, CODE_BLOCK_FILL_GRAY);
+  pdf.rect(cursor.leftPt, codeBlockTopYPt, cursor.contentWidthPt, codeBlockHeightPt, "F");
   // 代码块文本当前基线 y 坐标。
   let lineBaselineYPt = codeBlockTopYPt + codePaddingYPt + textBaselineOffsetPt;
   codeLines.forEach((lineText) => {
