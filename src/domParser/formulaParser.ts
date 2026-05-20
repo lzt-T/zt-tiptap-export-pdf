@@ -101,6 +101,7 @@ function isSameInlineTextStyle(leftStyle?: ExportInlineTextStyle, rightStyle?: E
     Boolean(leftStyle?.underline) === Boolean(rightStyle?.underline) &&
     Boolean(leftStyle?.strike) === Boolean(rightStyle?.strike) &&
     Boolean(leftStyle?.code) === Boolean(rightStyle?.code) &&
+    (leftStyle?.script || "") === (rightStyle?.script || "") &&
     (leftStyle?.linkHref || "") === (rightStyle?.linkHref || "") &&
     isSameRgbColor(leftStyle?.color, rightStyle?.color) &&
     isSameRgbColor(leftStyle?.backgroundColor, rightStyle?.backgroundColor)
@@ -189,6 +190,12 @@ function mergeElementSemanticInlineStyle(inlineStyle: ExportInlineTextStyle, ele
   inlineStyle.underline = inlineStyle.underline || isUnderlineTagName(tagName);
   inlineStyle.strike = inlineStyle.strike || isStrikeTagName(tagName);
   inlineStyle.code = inlineStyle.code || tagName === "code";
+  if (!inlineStyle.script && tagName === "sup") {
+    inlineStyle.script = "super";
+  }
+  if (!inlineStyle.script && tagName === "sub") {
+    inlineStyle.script = "sub";
+  }
   inlineStyle.linkHref = inlineStyle.linkHref || getLinkElementHref(element);
 }
 
@@ -207,6 +214,12 @@ function mergeElementComputedInlineStyle(inlineStyle: ExportInlineTextStyle, ele
     inlineStyle.italic || computedStyle.fontStyle === "italic" || computedStyle.fontStyle === "oblique";
   inlineStyle.underline = inlineStyle.underline || textDecorationLine.includes("underline");
   inlineStyle.strike = inlineStyle.strike || textDecorationLine.includes("line-through");
+  if (!inlineStyle.script && computedStyle.verticalAlign === "super") {
+    inlineStyle.script = "super";
+  }
+  if (!inlineStyle.script && computedStyle.verticalAlign === "sub") {
+    inlineStyle.script = "sub";
+  }
   inlineStyle.color = inlineStyle.color || (isDefaultExportColor(color, DEFAULT_INLINE_TEXT_COLOR) ? undefined : color);
   inlineStyle.backgroundColor =
     inlineStyle.backgroundColor ||

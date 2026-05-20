@@ -28,6 +28,13 @@ const INLINE_IMAGE_BASELINE_RATIO = 0.82;
 const INLINE_CODE_PADDING_X_RATIO = 0.35;
 // 行内代码纵向内边距比例。
 const INLINE_CODE_PADDING_Y_RATIO = 0.18;
+// 上下标字号比例。
+const INLINE_SCRIPT_FONT_SIZE_RATIO = 0.65;
+// 上下标基线偏移比例。
+const INLINE_SCRIPT_BASELINE_OFFSET_RATIO_MAP: Record<NonNullable<ExportInlineTextStyle["script"]>, number> = {
+  super: -0.35,
+  sub: 0.2,
+};
 // 行内代码背景色。
 const INLINE_CODE_BACKGROUND_COLOR: ExportRgbColor = [241, 245, 249];
 // 链接文本颜色。
@@ -84,6 +91,7 @@ function isSameInlineTextStyle(leftStyle?: ExportInlineTextStyle, rightStyle?: E
     Boolean(leftStyle?.underline) === Boolean(rightStyle?.underline) &&
     Boolean(leftStyle?.strike) === Boolean(rightStyle?.strike) &&
     Boolean(leftStyle?.code) === Boolean(rightStyle?.code) &&
+    (leftStyle?.script || "") === (rightStyle?.script || "") &&
     (leftStyle?.linkHref || "") === (rightStyle?.linkHref || "") &&
     isSameRgbColor(leftStyle?.color, rightStyle?.color) &&
     isSameRgbColor(leftStyle?.backgroundColor, rightStyle?.backgroundColor)
@@ -215,13 +223,13 @@ function drawInlineTextBackground(
   leftPt: number,
   baselineYPt: number,
   widthPt: number,
-  blockStyle: ExportTextBlockStyle,
+  fontSizePt: number,
   backgroundColor: ExportRgbColor,
 ): void {
   // 背景高度。
-  const backgroundHeightPt = blockStyle.fontSizePt * 1.05;
+  const backgroundHeightPt = fontSizePt * 1.05;
   // 背景顶部坐标。
-  const backgroundTopPt = baselineYPt - blockStyle.fontSizePt * 0.82;
+  const backgroundTopPt = baselineYPt - fontSizePt * 0.82;
   pdf.setFillColor(backgroundColor[0], backgroundColor[1], backgroundColor[2]);
   pdf.rect(leftPt, backgroundTopPt, widthPt, backgroundHeightPt, "F");
 }
@@ -232,12 +240,12 @@ function drawInlineCodeBackground(
   leftPt: number,
   baselineYPt: number,
   widthPt: number,
-  style: ExportTextBlockStyle,
+  fontSizePt: number,
 ): void {
   // 背景高度。
-  const backgroundHeightPt = style.fontSizePt + style.fontSizePt * INLINE_CODE_PADDING_Y_RATIO * 2;
+  const backgroundHeightPt = fontSizePt + fontSizePt * INLINE_CODE_PADDING_Y_RATIO * 2;
   // 背景顶部坐标。
-  const backgroundTopPt = baselineYPt - style.fontSizePt * 0.82;
+  const backgroundTopPt = baselineYPt - fontSizePt * 0.82;
   pdf.setFillColor(INLINE_CODE_BACKGROUND_COLOR[0], INLINE_CODE_BACKGROUND_COLOR[1], INLINE_CODE_BACKGROUND_COLOR[2]);
   pdf.roundedRect(leftPt, backgroundTopPt, widthPt, backgroundHeightPt, 2, 2, "F");
 }
@@ -249,7 +257,7 @@ function drawInlineTextDecorations(
   textLeftPt: number,
   baselineYPt: number,
   textWidthPt: number,
-  blockStyle: ExportTextBlockStyle,
+  fontSizePt: number,
 ): void {
   if (!textStyle?.underline && !textStyle?.strike) {
     return;
@@ -257,15 +265,15 @@ function drawInlineTextDecorations(
   // 文本颜色。
   const textColor = getInlineTextColor(textStyle);
   pdf.setDrawColor(textColor[0], textColor[1], textColor[2]);
-  pdf.setLineWidth(Math.max(blockStyle.fontSizePt * 0.04, 0.4));
+  pdf.setLineWidth(Math.max(fontSizePt * 0.04, 0.4));
   if (textStyle.underline) {
     // 下划线 y 坐标。
-    const underlineYPt = baselineYPt + blockStyle.fontSizePt * 0.12;
+    const underlineYPt = baselineYPt + fontSizePt * 0.12;
     pdf.line(textLeftPt, underlineYPt, textLeftPt + textWidthPt, underlineYPt);
   }
   if (textStyle.strike) {
     // 删除线 y 坐标。
-    const strikeYPt = baselineYPt - blockStyle.fontSizePt * 0.32;
+    const strikeYPt = baselineYPt - fontSizePt * 0.32;
     pdf.line(textLeftPt, strikeYPt, textLeftPt + textWidthPt, strikeYPt);
   }
 }
@@ -277,14 +285,14 @@ function writeLinkAnnotation(
   textLeftPt: number,
   baselineYPt: number,
   textWidthPt: number,
-  blockStyle: ExportTextBlockStyle,
+  fontSizePt: number,
 ): void {
   if (!textStyle?.linkHref) {
     return;
   }
   // 链接区域顶部坐标。
-  const linkTopPt = baselineYPt - blockStyle.fontSizePt * 0.85;
-  pdf.link(textLeftPt, linkTopPt, textWidthPt, blockStyle.lineHeightPt, { url: textStyle.linkHref });
+  const linkTopPt = baselineYPt - fontSizePt * 0.85;
+  pdf.link(textLeftPt, linkTopPt, textWidthPt, fontSizePt * 1.2, { url: textStyle.linkHref });
 }
 
 /** 写入行内文本项目。 */
@@ -300,17 +308,25 @@ function writeInlineTextItem(
   const codePaddingXPt = getInlineCodePaddingXPt(blockStyle, item.style);
   // 文本起始 x 坐标。
   const textLeftPt = leftPt + codePaddingXPt;
+  // 文本实际字号。
+  const textFontSizePt = item.style?.script ? blockStyle.fontSizePt * INLINE_SCRIPT_FONT_SIZE_RATIO : blockStyle.fontSizePt;
+  // 文本基线偏移比例。
+  const textBaselineOffsetRatio = item.style?.script ? INLINE_SCRIPT_BASELINE_OFFSET_RATIO_MAP[item.style.script] : 0;
+  // 文本实际基线。
+  const textBaselineYPt = baselineYPt + blockStyle.fontSizePt * textBaselineOffsetRatio;
   if (item.style?.backgroundColor && !item.style.code) {
-    drawInlineTextBackground(pdf, textLeftPt, baselineYPt, item.textWidthPt, blockStyle, item.style.backgroundColor);
+    drawInlineTextBackground(pdf, textLeftPt, textBaselineYPt, item.textWidthPt, textFontSizePt, item.style.backgroundColor);
   }
   if (item.style?.code) {
-    drawInlineCodeBackground(pdf, leftPt, baselineYPt, item.widthPt, blockStyle);
+    drawInlineCodeBackground(pdf, leftPt, textBaselineYPt, item.widthPt, textFontSizePt);
   }
   setInlineTextFont(pdf, fontFamily, item.style);
+  pdf.setFontSize(textFontSizePt);
   setInlineTextColor(pdf, item.style);
-  pdf.text(item.text, textLeftPt, baselineYPt);
-  drawInlineTextDecorations(pdf, item.style, textLeftPt, baselineYPt, item.textWidthPt, blockStyle);
-  writeLinkAnnotation(pdf, item.style, textLeftPt, baselineYPt, item.textWidthPt, blockStyle);
+  pdf.text(item.text, textLeftPt, textBaselineYPt);
+  drawInlineTextDecorations(pdf, item.style, textLeftPt, textBaselineYPt, item.textWidthPt, textFontSizePt);
+  writeLinkAnnotation(pdf, item.style, textLeftPt, textBaselineYPt, item.textWidthPt, textFontSizePt);
+  pdf.setFontSize(blockStyle.fontSizePt);
 }
 
 /** 写入含行内公式的混合内容块。 */
@@ -395,6 +411,7 @@ export function writeInlineContentTextBlock(
   /** 收集文本片段。 */
   function collectTextRun(text: string, textStyle?: ExportInlineTextStyle): void {
     setInlineTextFont(pdf, fontFamily, textStyle);
+    pdf.setFontSize(textStyle?.script ? style.fontSizePt * INLINE_SCRIPT_FONT_SIZE_RATIO : style.fontSizePt);
     // 待写入字符。
     const characters = Array.from(text);
     characters.forEach((character) => {
@@ -415,6 +432,7 @@ export function writeInlineContentTextBlock(
       }
       appendTextLineItem(character, characterWidthPt, textStyle);
     });
+    pdf.setFontSize(style.fontSizePt);
   }
 
   /** 收集图片片段。 */

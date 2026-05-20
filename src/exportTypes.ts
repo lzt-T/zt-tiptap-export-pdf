@@ -87,6 +87,8 @@ export interface ExportInlineTextStyle {
   strike?: boolean;
   /** 是否行内代码。 */
   code?: boolean;
+  /** 上标或下标。 */
+  script?: "super" | "sub";
   /** 链接地址。 */
   linkHref?: string;
   /** 文本颜色。 */
