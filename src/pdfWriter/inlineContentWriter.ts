@@ -4,6 +4,7 @@ import {
   type ExportImageContent,
   type ExportInlineContentRun,
   type ExportInlineTextStyle,
+  type ExportRgbColor,
   type ExportTaskListMarker,
   type ExportTextBlockStyle,
   type PdfWriteCursor,
@@ -28,11 +29,11 @@ const INLINE_CODE_PADDING_X_RATIO = 0.35;
 // 行内代码纵向内边距比例。
 const INLINE_CODE_PADDING_Y_RATIO = 0.18;
 // 行内代码背景色。
-const INLINE_CODE_BACKGROUND_COLOR = [241, 245, 249] as const;
+const INLINE_CODE_BACKGROUND_COLOR: ExportRgbColor = [241, 245, 249];
 // 链接文本颜色。
-const LINK_TEXT_COLOR = [29, 78, 216] as const;
+const LINK_TEXT_COLOR: ExportRgbColor = [29, 78, 216];
 // 默认文本颜色。
-const DEFAULT_TEXT_COLOR = [17, 17, 17] as const;
+const DEFAULT_TEXT_COLOR: ExportRgbColor = [17, 17, 17];
 
 /** 行内图片导出尺寸。 */
 interface InlineImageSizePt {
@@ -83,8 +84,18 @@ function isSameInlineTextStyle(leftStyle?: ExportInlineTextStyle, rightStyle?: E
     Boolean(leftStyle?.underline) === Boolean(rightStyle?.underline) &&
     Boolean(leftStyle?.strike) === Boolean(rightStyle?.strike) &&
     Boolean(leftStyle?.code) === Boolean(rightStyle?.code) &&
-    (leftStyle?.linkHref || "") === (rightStyle?.linkHref || "")
+    (leftStyle?.linkHref || "") === (rightStyle?.linkHref || "") &&
+    isSameRgbColor(leftStyle?.color, rightStyle?.color) &&
+    isSameRgbColor(leftStyle?.backgroundColor, rightStyle?.backgroundColor)
   );
+}
+
+/** 判断两个 RGB 颜色是否一致。 */
+function isSameRgbColor(leftColor?: ExportRgbColor, rightColor?: ExportRgbColor): boolean {
+  if (!leftColor || !rightColor) {
+    return !leftColor && !rightColor;
+  }
+  return leftColor[0] === rightColor[0] && leftColor[1] === rightColor[1] && leftColor[2] === rightColor[2];
 }
 
 /** 绘制任务列表标记。 */
@@ -183,11 +194,36 @@ function setInlineTextFont(pdf: JsPdfInstance, fontFamily: string, textStyle?: E
   }
 }
 
+/** 读取行内文本颜色。 */
+function getInlineTextColor(textStyle?: ExportInlineTextStyle): ExportRgbColor {
+  if (textStyle?.linkHref) {
+    return LINK_TEXT_COLOR;
+  }
+  return textStyle?.color || DEFAULT_TEXT_COLOR;
+}
+
 /** 设置行内文本颜色。 */
 function setInlineTextColor(pdf: JsPdfInstance, textStyle?: ExportInlineTextStyle): void {
   // 文本颜色。
-  const textColor = textStyle?.linkHref ? LINK_TEXT_COLOR : DEFAULT_TEXT_COLOR;
+  const textColor = getInlineTextColor(textStyle);
   pdf.setTextColor(textColor[0], textColor[1], textColor[2]);
+}
+
+/** 绘制行内文本高亮背景。 */
+function drawInlineTextBackground(
+  pdf: JsPdfInstance,
+  leftPt: number,
+  baselineYPt: number,
+  widthPt: number,
+  blockStyle: ExportTextBlockStyle,
+  backgroundColor: ExportRgbColor,
+): void {
+  // 背景高度。
+  const backgroundHeightPt = blockStyle.fontSizePt * 1.05;
+  // 背景顶部坐标。
+  const backgroundTopPt = baselineYPt - blockStyle.fontSizePt * 0.82;
+  pdf.setFillColor(backgroundColor[0], backgroundColor[1], backgroundColor[2]);
+  pdf.rect(leftPt, backgroundTopPt, widthPt, backgroundHeightPt, "F");
 }
 
 /** 绘制行内代码背景。 */
@@ -218,7 +254,9 @@ function drawInlineTextDecorations(
   if (!textStyle?.underline && !textStyle?.strike) {
     return;
   }
-  pdf.setDrawColor(textStyle.linkHref ? LINK_TEXT_COLOR[0] : DEFAULT_TEXT_COLOR[0], textStyle.linkHref ? LINK_TEXT_COLOR[1] : DEFAULT_TEXT_COLOR[1], textStyle.linkHref ? LINK_TEXT_COLOR[2] : DEFAULT_TEXT_COLOR[2]);
+  // 文本颜色。
+  const textColor = getInlineTextColor(textStyle);
+  pdf.setDrawColor(textColor[0], textColor[1], textColor[2]);
   pdf.setLineWidth(Math.max(blockStyle.fontSizePt * 0.04, 0.4));
   if (textStyle.underline) {
     // 下划线 y 坐标。
@@ -262,6 +300,9 @@ function writeInlineTextItem(
   const codePaddingXPt = getInlineCodePaddingXPt(blockStyle, item.style);
   // 文本起始 x 坐标。
   const textLeftPt = leftPt + codePaddingXPt;
+  if (item.style?.backgroundColor && !item.style.code) {
+    drawInlineTextBackground(pdf, textLeftPt, baselineYPt, item.textWidthPt, blockStyle, item.style.backgroundColor);
+  }
   if (item.style?.code) {
     drawInlineCodeBackground(pdf, leftPt, baselineYPt, item.widthPt, blockStyle);
   }

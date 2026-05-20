@@ -32,6 +32,9 @@ export type ExportTaskListMarker = "unchecked" | "checked";
 /** 导出文本块类型。 */
 export type ExportTextBlockType = "blockquote" | "table" | "code" | "image" | "inlineContent";
 
+/** 导出 RGB 颜色。 */
+export type ExportRgbColor = [number, number, number];
+
 /** 表格单元格。 */
 export interface ExportTableCell {
   /** 单元格文本。 */
@@ -86,6 +89,10 @@ export interface ExportInlineTextStyle {
   code?: boolean;
   /** 链接地址。 */
   linkHref?: string;
+  /** 文本颜色。 */
+  color?: ExportRgbColor;
+  /** 文本高亮背景色。 */
+  backgroundColor?: ExportRgbColor;
 }
 
 /** 导出行内内容片段。 */

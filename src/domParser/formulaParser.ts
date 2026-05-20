@@ -3,6 +3,7 @@ import {
   type ExportImageContent,
   type ExportInlineContentRun,
   type ExportInlineTextStyle,
+  type ExportRgbColor,
   type ExportTextBlockContent,
 } from "../exportTypes";
 import { getListItemIndentPt, getListItemPrefix, getTaskListMarker, isTaskListItem } from "./listParser";
@@ -17,6 +18,10 @@ const FORMULA_CAPTURE_DPR = 2;
 const INLINE_FORMULA_BLOCK_TAG_NAMES = ["h1", "h2", "h3", "h4", "h5", "h6", "p", "li"];
 // 支持行内样式导出的标签。
 const INLINE_CONTENT_BLOCK_TAG_NAMES = INLINE_FORMULA_BLOCK_TAG_NAMES;
+// 默认行内文本颜色。
+const DEFAULT_INLINE_TEXT_COLOR: ExportRgbColor = [17, 17, 17];
+// 默认行内背景颜色。
+const DEFAULT_INLINE_BACKGROUND_COLOR: ExportRgbColor = [255, 255, 255];
 
 /** 判断节点是否为块级公式渲染节点。 */
 export function isBlockFormulaRenderElement(element: HTMLElement): boolean {
@@ -96,8 +101,45 @@ function isSameInlineTextStyle(leftStyle?: ExportInlineTextStyle, rightStyle?: E
     Boolean(leftStyle?.underline) === Boolean(rightStyle?.underline) &&
     Boolean(leftStyle?.strike) === Boolean(rightStyle?.strike) &&
     Boolean(leftStyle?.code) === Boolean(rightStyle?.code) &&
-    (leftStyle?.linkHref || "") === (rightStyle?.linkHref || "")
+    (leftStyle?.linkHref || "") === (rightStyle?.linkHref || "") &&
+    isSameRgbColor(leftStyle?.color, rightStyle?.color) &&
+    isSameRgbColor(leftStyle?.backgroundColor, rightStyle?.backgroundColor)
   );
+}
+
+/** 判断两个 RGB 颜色是否一致。 */
+function isSameRgbColor(leftColor?: ExportRgbColor, rightColor?: ExportRgbColor): boolean {
+  if (!leftColor || !rightColor) {
+    return !leftColor && !rightColor;
+  }
+  return leftColor[0] === rightColor[0] && leftColor[1] === rightColor[1] && leftColor[2] === rightColor[2];
+}
+
+/** 解析 CSS RGB 颜色。 */
+function parseCssRgbColor(value: string): ExportRgbColor | undefined {
+  // RGB 颜色匹配结果。
+  const match = value.match(/^rgba?\(([^)]+)\)$/i);
+  if (!match) {
+    return undefined;
+  }
+  // CSS 颜色通道。
+  const colorParts = match[1].split(",").map((part) => part.trim());
+  // Alpha 通道。
+  const alpha = colorParts[3] === undefined ? 1 : Number.parseFloat(colorParts[3]);
+  if (alpha <= 0) {
+    return undefined;
+  }
+  // RGB 通道。
+  const rgbColor = colorParts.slice(0, 3).map((part) => Number.parseInt(part, 10));
+  if (rgbColor.some((color) => !Number.isFinite(color))) {
+    return undefined;
+  }
+  return [rgbColor[0], rgbColor[1], rgbColor[2]];
+}
+
+/** 判断颜色是否为默认导出颜色。 */
+function isDefaultExportColor(color: ExportRgbColor | undefined, defaultColor: ExportRgbColor): boolean {
+  return Boolean(color) && isSameRgbColor(color, defaultColor);
 }
 
 /** 判断 CSS 字重是否应视为加粗。 */
@@ -156,11 +198,19 @@ function mergeElementComputedInlineStyle(inlineStyle: ExportInlineTextStyle, ele
   const computedStyle = window.getComputedStyle(element);
   // 文本装饰线。
   const textDecorationLine = computedStyle.textDecorationLine || computedStyle.textDecoration;
+  // 文本颜色。
+  const color = parseCssRgbColor(computedStyle.color);
+  // 文本背景颜色。
+  const backgroundColor = parseCssRgbColor(computedStyle.backgroundColor);
   inlineStyle.bold = inlineStyle.bold || isBoldFontWeight(computedStyle.fontWeight);
   inlineStyle.italic =
     inlineStyle.italic || computedStyle.fontStyle === "italic" || computedStyle.fontStyle === "oblique";
   inlineStyle.underline = inlineStyle.underline || textDecorationLine.includes("underline");
   inlineStyle.strike = inlineStyle.strike || textDecorationLine.includes("line-through");
+  inlineStyle.color = inlineStyle.color || (isDefaultExportColor(color, DEFAULT_INLINE_TEXT_COLOR) ? undefined : color);
+  inlineStyle.backgroundColor =
+    inlineStyle.backgroundColor ||
+    (isDefaultExportColor(backgroundColor, DEFAULT_INLINE_BACKGROUND_COLOR) ? undefined : backgroundColor);
 }
 
 /** 判断行内样式是否有有效内容。 */
