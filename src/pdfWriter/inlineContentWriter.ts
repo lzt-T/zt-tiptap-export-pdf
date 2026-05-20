@@ -33,8 +33,6 @@ const INLINE_CODE_BACKGROUND_COLOR = [241, 245, 249] as const;
 const LINK_TEXT_COLOR = [29, 78, 216] as const;
 // 默认文本颜色。
 const DEFAULT_TEXT_COLOR = [17, 17, 17] as const;
-// 加粗模拟偏移比例。
-const BOLD_SIMULATE_OFFSET_RATIO = 0.018;
 
 /** 行内图片导出尺寸。 */
 interface InlineImageSizePt {
@@ -270,11 +268,6 @@ function writeInlineTextItem(
   setInlineTextFont(pdf, fontFamily, item.style);
   setInlineTextColor(pdf, item.style);
   pdf.text(item.text, textLeftPt, baselineYPt);
-  if (item.style?.bold) {
-    // 加粗兜底描边。
-    const boldOffsetPt = Math.max(blockStyle.fontSizePt * BOLD_SIMULATE_OFFSET_RATIO, 0.12);
-    pdf.text(item.text, textLeftPt + boldOffsetPt, baselineYPt);
-  }
   drawInlineTextDecorations(pdf, item.style, textLeftPt, baselineYPt, item.textWidthPt, blockStyle);
   writeLinkAnnotation(pdf, item.style, textLeftPt, baselineYPt, item.textWidthPt, blockStyle);
 }
