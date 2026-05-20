@@ -165,6 +165,53 @@ async function createCorsImageElement(src: string): Promise<HTMLImageElement | n
   });
 }
 
+/** 将图片 Blob 读取为 data URL。 */
+function readBlobAsDataUrl(blob: Blob): Promise<string | null> {
+  return new Promise((resolve) => {
+    // Blob 读取器。
+    const reader = new FileReader();
+
+    /** 处理 Blob 读取完成。 */
+    function handleLoad(): void {
+      // 读取结果。
+      const result = reader.result;
+      resolve(typeof result === "string" ? result : null);
+    }
+
+    /** 处理 Blob 读取失败。 */
+    function handleError(): void {
+      resolve(null);
+    }
+
+    reader.addEventListener("load", handleLoad);
+    reader.addEventListener("error", handleError);
+    reader.readAsDataURL(blob);
+  });
+}
+
+/** 通过 fetch 下载可跨域读取的图片 data URL。 */
+async function fetchImageDataUrl(src: string): Promise<string | null> {
+  try {
+    // 图片响应。
+    const response = await fetch(src, { mode: "cors" });
+    if (!response.ok) {
+      return null;
+    }
+
+    // 响应内容类型。
+    const contentType = response.headers.get("content-type") || "";
+    if (!contentType.toLowerCase().startsWith("image/")) {
+      return null;
+    }
+
+    // 图片二进制内容。
+    const imageBlob = await response.blob();
+    return readBlobAsDataUrl(imageBlob);
+  } catch {
+    return null;
+  }
+}
+
 /** 将图片节点转为 PNG data URL。 */
 async function getImageDataUrl(imageElement: HTMLImageElement, widthPx: number, heightPx: number): Promise<string | null> {
   // 图片地址。
@@ -180,7 +227,13 @@ async function getImageDataUrl(imageElement: HTMLImageElement, widthPx: number, 
   }
   // 跨域图片副本。
   const corsImageElement = await createCorsImageElement(imageSrc);
-  return corsImageElement ? drawImageToDataUrl(corsImageElement, widthPx, heightPx) : null;
+  // 跨域副本 data URL。
+  const corsImageDataUrl = corsImageElement ? drawImageToDataUrl(corsImageElement, widthPx, heightPx) : null;
+  if (corsImageDataUrl) {
+    return corsImageDataUrl;
+  }
+
+  return fetchImageDataUrl(imageSrc);
 }
 
 /** 读取图片说明文本。 */
