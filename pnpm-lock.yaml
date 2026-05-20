@@ -8,15 +8,16 @@ importers:
 
   .:
     dependencies:
-      '@vitejs/plugin-react':
-        specifier: ^6.0.2
-        version: 6.0.2(vite@8.0.13(jiti@2.7.0))
       '@zumer/snapdom':
         specifier: ^2.12.0
         version: 2.12.0
       jspdf:
         specifier: ^4.2.1
         version: 4.2.1
+    devDependencies:
+      '@vitejs/plugin-react':
+        specifier: ^6.0.2
+        version: 6.0.2(vite@8.0.13(jiti@2.7.0))
       react:
         specifier: ^19.2.6
         version: 19.2.6
@@ -29,7 +30,6 @@ importers:
       zt-reactjs-tiptap:
         specifier: ^2.0.16
         version: 2.0.16(@floating-ui/dom@1.7.6)(@tiptap/extension-code-block@3.23.4(@tiptap/core@3.23.4(@tiptap/pm@3.23.4))(@tiptap/pm@3.23.4))(@tiptap/extension-list@3.23.4(@tiptap/core@3.23.4(@tiptap/pm@3.23.4))(@tiptap/pm@3.23.4))(@tiptap/extensions@3.23.4(@tiptap/core@3.23.4(@tiptap/pm@3.23.4))(@tiptap/pm@3.23.4))(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(vite@8.0.13(jiti@2.7.0))
-    devDependencies:
       typescript:
         specifier: ^5.9.3
         version: 5.9.3
