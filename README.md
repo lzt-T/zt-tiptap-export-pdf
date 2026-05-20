@@ -1,28 +1,47 @@
 # zt-tiptap-export-pdf
 
-使用 `jsPDF` 在浏览器中将编辑器内容节点导出为 PDF。
+使用 `jsPDF` 在浏览器中将 Tiptap / ProseMirror 编辑器正文节点导出为 PDF。
 
 ## 安装
 
+项目使用 `pnpm` 管理依赖：
+
+```bash
+pnpm add zt-tiptap-export-pdf
+```
+
+消费包时也可以按项目实际包管理工具选择：
+
 ```bash
 npm install zt-tiptap-export-pdf
+yarn add zt-tiptap-export-pdf
 ```
 
 ## API
 
 ```ts
-exportEditorToPdf(
-  element: HTMLElement,
-  options?: {
-    filename?: string
-    fontFamily?: string
-  }
-): Promise<void>
+exportEditorToPdf(element: HTMLElement, options?: ExportEditorToPdfOptions): Promise<void>
 ```
 
-- `element`：编辑区内容容器（建议仅传正文区域，不含工具栏/弹层）。
+```ts
+interface ExportEditorToPdfOptions {
+  filename?: string
+  fontFamily?: string
+}
+```
+
+- `element`：编辑器正文容器，建议传入 `editor.view.dom` 或 `.ProseMirror` 节点，不要包含工具栏、弹层等非正文内容。
 - `options.filename`：导出文件名，默认 `editor.pdf`。
-- `options.fontFamily`：导出时使用的字体族，默认 `NotoSansSC`（内置中文字体）。
+- `options.fontFamily`：导出时使用的字体族，默认 `NotoSansSC`，包内置中文字体。
+
+## 支持内容
+
+- 段落、标题、空段落占位。
+- 有序列表、无序列表、任务列表。
+- 引用、代码块、表格。
+- 图片与图片说明文本。
+- 块级公式与行内公式。
+- 基础行内样式，包括加粗、斜体、下划线、删除线、行内代码、上下标、链接、文字颜色和高亮背景色。
 
 ## 基础用法
 
@@ -30,12 +49,13 @@ exportEditorToPdf(
 import { exportEditorToPdf } from 'zt-tiptap-export-pdf'
 
 const element = document.querySelector('.ProseMirror') as HTMLElement | null
+
 if (element) {
-  await exportEditorToPdf(element)
+  await exportEditorToPdf(element, { filename: 'editor.pdf' })
 }
 ```
 
-## 与 zt-reactjs-tiptap 集成（可选启用）
+## 与 zt-reactjs-tiptap 集成
 
 ```tsx
 import { Download } from 'lucide-react'
@@ -62,31 +82,34 @@ export default function App() {
 }
 ```
 
+如果你已经能直接拿到 `.ProseMirror` 节点，也可以把该节点作为 `element` 传入。传入内容应尽量只包含编辑器正文。
+
 ## 限制说明
 
 - 仅支持浏览器环境。
-- 首版目标是“先可用”，暂不包含页眉页脚、水印和高级打印配置。
+- 当前固定按 A4 纵向导出。
+- 暂不包含页眉页脚、水印和高级打印配置。
+- 跨域图片需要满足浏览器 canvas / CORS 限制，否则可能无法导出到 PDF。
 - 内置中文字体会增大产物体积，适用于“中文不乱码、可搜索复制”优先的场景。
-- 为降低“偶发乱码”，导出会在 `html()` 路径显式传入 `fontFaces` 并等待字体就绪。
-- 若通过脚本更新内置字体资源，请输出标准 TS 字符串常量，避免写入模板转义标记导致解析失败。
 
-## 手工验证（zt-reactjs-tiptap）
+## 手工验证
 
-已在仓库内提供独立验证页目录：`manual-test/`，用于验证与 `zt-reactjs-tiptap` 的集成导出流程。
+仓库内提供 `manual-test/` 作为集成验证页，用于本地确认与 `zt-reactjs-tiptap` 的导出流程。它不是使用本包的必要步骤。
 
-1. 安装依赖（已执行）：
+1. 安装仓库依赖。
 
 ```bash
-pnpm add zt-reactjs-tiptap react react-dom vite @vitejs/plugin-react
+pnpm install
 ```
 
-2. 启动手工验证页（在项目根目录执行）：
+2. 启动手工验证页。
 
 ```bash
 pnpm run test:manual
 ```
 
 3. 打开页面后验证：
-- 编辑器可正常输入内容；
-- 点击工具栏中的 `PDF` 按钮触发下载；
+
+- 编辑器可正常输入内容。
+- 点击工具栏中的 `PDF` 按钮触发下载。
 - 导出文件名为 `editor.pdf`。
