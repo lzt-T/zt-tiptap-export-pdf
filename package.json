@@ -1,6 +1,6 @@
 {
   "name": "zt-tiptap-export-pdf",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Export editor DOM content to PDF in browser using jsPDF",
   "type": "module",
   "main": "dist/index.js",
@@ -12,6 +12,7 @@
   ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
+    "prepublishOnly": "pnpm run build",
     "test:manual": "vite manual-test --config manual-test/vite.config.ts"
   },
   "keywords": [
