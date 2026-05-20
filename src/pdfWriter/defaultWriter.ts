@@ -99,6 +99,11 @@ export function writeDefaultTextBlock(
   const textWidthPt = cursor.contentWidthPt - blockIndentLeftPt - listTextIndentPt - listContentSlotWidthPt;
   // 可写入文本行。
   const textLines = splitTextToLines(pdf, text, textWidthPt);
+  if (textLines.length === 0) {
+    ensureLineSpace(pdf, cursor, style.lineHeightPt);
+    cursor.yPt += style.lineHeightPt + style.marginBottomPt;
+    return;
+  }
   textLines.forEach((textLine, lineIndex) => {
     ensureLineSpace(pdf, cursor, style.lineHeightPt);
     if (listMarker && lineIndex === 0) {

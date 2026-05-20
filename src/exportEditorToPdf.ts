@@ -28,6 +28,24 @@ import { getTextBlockStyle, parsePxValue } from "./exportText";
 import { type ExportEditorToPdfOptions, type PdfWriteCursor } from "./exportTypes";
 import { ensureBuiltinChineseFontRegistered, waitForFontReady } from "./font";
 
+// 允许空内容占位的文本块标签。
+const EMPTY_TEXT_PLACEHOLDER_TAG_NAMES = new Set(["p", "li", "h1", "h2", "h3", "h4", "h5", "h6", "blockquote", "pre"]);
+
+/** 判断空内容节点是否应保留一行占位高度。 */
+function shouldKeepEmptyTextPlaceholder(
+  element: HTMLElement,
+  isBlockFormulaElement: boolean,
+  isImageElement: boolean,
+  hasInlineFormulaElement: boolean,
+): boolean {
+  if (isBlockFormulaElement || isImageElement || hasInlineFormulaElement) {
+    return false;
+  }
+  // 块级标签名。
+  const tagName = element.tagName.toLowerCase();
+  return EMPTY_TEXT_PLACEHOLDER_TAG_NAMES.has(tagName);
+}
+
 /**
  * 将编辑器内容节点导出为 PDF。
  * 说明：
@@ -126,17 +144,28 @@ export async function exportEditorToPdf(
     const blockElements = getExportBlockElements(exportRootElement);
 
     for (const blockElement of blockElements) {
+      // 是否为块级公式。
+      const isBlockFormulaElement = isBlockFormulaRenderElement(blockElement);
+      // 是否为图片块。
+      const isImageElement = isImageExportElement(blockElement);
+      // 是否包含行内公式。
+      const hasInlineFormulaElement = hasInlineFormulaRenderElement(blockElement);
+      // 是否为行内混合内容块。
+      const isInlineContentElement = isInlineContentExportElement(blockElement);
       // 块级导出内容。
-      const blockContent = isBlockFormulaRenderElement(blockElement)
+      const blockContent = isBlockFormulaElement
         ? await getFormulaImageBlockContent(blockElement)
-        : isImageExportElement(blockElement)
+        : isImageElement
           ? await getImageBlockExportContent(blockElement)
-          : hasInlineFormulaRenderElement(blockElement)
+          : hasInlineFormulaElement
             ? await getInlineFormulaBlockContent(blockElement)
-            : isInlineContentExportElement(blockElement)
+            : isInlineContentElement
               ? await getInlineContentBlockContent(blockElement)
               : getBlockExportContent(blockElement, exportRootElement);
-      if (!blockContent.text) {
+      if (
+        !blockContent.text &&
+        !shouldKeepEmptyTextPlaceholder(blockElement, isBlockFormulaElement, isImageElement, hasInlineFormulaElement)
+      ) {
         continue;
       }
       // 块级文本样式。
