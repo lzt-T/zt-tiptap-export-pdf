@@ -1,7 +1,7 @@
 import { type jsPDF as JsPdfInstance } from "jspdf";
 import { DEFAULT_BLOCK_MARGIN_BOTTOM_PT, PDF_TOP_MARGIN_PT } from "../exportConstants";
-import { splitTextToLines } from "../exportText";
-import { type ExportTableContent, type PdfWriteCursor } from "../exportTypes";
+import { type ExportTableCellBlock, type ExportTableContent, type PdfWriteCursor } from "../exportTypes";
+import { getTableCellContentHeightPt, writeTableCellContent } from "./tableCellContentWriter";
 import { type WriteTextBlockParams } from "./types";
 
 // 表格默认单元格内边距（pt）。
@@ -17,6 +17,8 @@ const TABLE_MARGIN_BOTTOM_PT = DEFAULT_BLOCK_MARGIN_BOTTOM_PT;
 interface TableLayoutCell {
   /** 单元格文本。 */
   text: string;
+  /** 单元格内块级内容。 */
+  blocks: ExportTableCellBlock[];
   /** 单元格起始行索引。 */
   startRowIndex: number;
   /** 单元格起始列索引。 */
@@ -45,8 +47,6 @@ interface TableLayoutResult {
 
 /** 表格绘制单元格。 */
 interface TableRenderCell extends TableLayoutCell {
-  /** 单元格拆分后的文本行。 */
-  textLines: string[];
   /** 单元格最小高度（pt）。 */
   requiredHeightPt: number;
 }
@@ -84,6 +84,7 @@ function buildTableLayout(tableContent: ExportTableContent): TableLayoutResult {
       }
       layoutCells.push({
         text: cell.text,
+        blocks: cell.blocks,
         startRowIndex: rowIndex,
         startColumnIndex: currentColumnIndex,
         colSpan: normalizedColSpan,
@@ -103,68 +104,23 @@ function buildTableLayout(tableContent: ExportTableContent): TableLayoutResult {
   };
 }
 
-/** 计算单元格文本行。 */
-function getTableCellTextLines(pdf: JsPdfInstance, text: string, textWidthPt: number): string[] {
-  // 文本拆行结果。
-  const splitLines = splitTextToLines(pdf, text, textWidthPt);
-  if (splitLines.length > 0) {
-    return splitLines;
-  }
-  return [""];
-}
-
-/** 计算单元格单行文本 x 坐标。 */
-function getTableCellLineLeftXPt(
-  pdf: JsPdfInstance,
-  lineText: string,
-  textAlign: "left" | "center" | "right",
-  cellLeftXPt: number,
-  cellWidthPt: number,
-): number {
-  // 单元格左侧文本边距起点 x 坐标。
-  const leftAlignedXPt = cellLeftXPt + TABLE_CELL_PADDING_PT;
-  // 单元格右侧文本边距终点 x 坐标。
-  const rightAlignedXPt = cellLeftXPt + cellWidthPt - TABLE_CELL_PADDING_PT;
-  if (textAlign === "center") {
-    // 当前行文本宽度（pt）。
-    const lineWidthPt = pdf.getTextWidth(lineText);
-    return cellLeftXPt + (cellWidthPt - lineWidthPt) / 2;
-  }
-  if (textAlign === "right") {
-    // 当前行文本宽度（pt）。
-    const lineWidthPt = pdf.getTextWidth(lineText);
-    return rightAlignedXPt - lineWidthPt;
-  }
-  return leftAlignedXPt;
-}
-
-/** 计算单元格文本起始基线 y 坐标。 */
-function getTableCellTextStartBaselineYPt(
+/** 计算单元格内容顶部 y 坐标。 */
+function getTableCellContentTopYPt(
   cellTopYPt: number,
   cellHeightPt: number,
-  textLineCount: number,
-  lineHeightPt: number,
+  contentHeightPt: number,
   verticalAlign: "top" | "middle" | "bottom",
 ): number {
-  // 文本块总高度（pt）。
-  const textBlockHeightPt = textLineCount * lineHeightPt;
   // 单元格可用内容高度（pt）。
   const availableContentHeightPt = Math.max(cellHeightPt - TABLE_CELL_PADDING_PT * 2, 0);
-  // 默认顶部文本块起始偏移（pt）。
-  let textTopOffsetPt = TABLE_CELL_PADDING_PT;
+  // 默认内容起始偏移（pt）。
+  let contentTopOffsetPt = TABLE_CELL_PADDING_PT;
   if (verticalAlign === "middle") {
-    textTopOffsetPt = TABLE_CELL_PADDING_PT + Math.max((availableContentHeightPt - textBlockHeightPt) / 2, 0);
+    contentTopOffsetPt = TABLE_CELL_PADDING_PT + Math.max((availableContentHeightPt - contentHeightPt) / 2, 0);
   } else if (verticalAlign === "bottom") {
-    textTopOffsetPt = TABLE_CELL_PADDING_PT + Math.max(availableContentHeightPt - textBlockHeightPt, 0);
+    contentTopOffsetPt = TABLE_CELL_PADDING_PT + Math.max(availableContentHeightPt - contentHeightPt, 0);
   }
-  // 期望起始基线 y 坐标。
-  const expectedBaselineYPt = cellTopYPt + textTopOffsetPt + lineHeightPt * 0.8;
-  // 基线最小边界。
-  const minBaselineYPt = cellTopYPt + TABLE_CELL_PADDING_PT + lineHeightPt * 0.8;
-  // 基线最大边界。
-  const maxBaselineYPt =
-    cellTopYPt + Math.max(cellHeightPt - TABLE_CELL_PADDING_PT - Math.max((textLineCount - 1) * lineHeightPt, 0), lineHeightPt) * 0.8;
-  return Math.min(Math.max(expectedBaselineYPt, minBaselineYPt), maxBaselineYPt);
+  return cellTopYPt + contentTopOffsetPt;
 }
 
 /** 计算表格每行高度。 */
@@ -272,15 +228,23 @@ export function writeTableTextBlock(
   const renderCells: TableRenderCell[] = tableLayout.cells.map((cell) => {
     // 单元格总宽度（pt）。
     const cellWidthPt = columnWidthPt * cell.colSpan;
-    // 单元格文本可用宽度（pt）。
-    const cellTextWidthPt = Math.max(cellWidthPt - TABLE_CELL_PADDING_PT * 2, 1);
-    // 单元格文本行。
-    const textLines = getTableCellTextLines(pdf, cell.text, cellTextWidthPt);
+    // 单元格内容可用宽度（pt）。
+    const cellContentWidthPt = Math.max(cellWidthPt - TABLE_CELL_PADDING_PT * 2, 1);
     // 单元格最小高度（pt）。
-    const requiredHeightPt = textLines.length * style.lineHeightPt + TABLE_CELL_PADDING_PT * 2;
+    const requiredHeightPt =
+      getTableCellContentHeightPt(pdf, {
+        blocks: cell.blocks,
+        fallbackText: cell.text,
+        textAlign: cell.textAlign,
+        leftPt: 0,
+        topYPt: 0,
+        contentWidthPt: cellContentWidthPt,
+        fallbackStyle: style,
+        fontFamily,
+      }) +
+      TABLE_CELL_PADDING_PT * 2;
     return {
       ...cell,
-      textLines,
       requiredHeightPt,
     };
   });
@@ -331,20 +295,24 @@ export function writeTableTextBlock(
           pdf.rect(cellLeftXPt, rowTopYPt, cellWidthPt, cellHeightPt, "F");
         }
         pdf.rect(cellLeftXPt, rowTopYPt, cellWidthPt, cellHeightPt, "S");
-        // 单元格文本起始基线 y 坐标。
-        const textStartBaselineYPt = getTableCellTextStartBaselineYPt(
+        // 单元格内容高度（pt）。
+        const cellContentHeightPt = Math.max(cell.requiredHeightPt - TABLE_CELL_PADDING_PT * 2, 0);
+        // 单元格内容顶部 y 坐标。
+        const contentTopYPt = getTableCellContentTopYPt(
           rowTopYPt,
           cellHeightPt,
-          cell.textLines.length,
-          style.lineHeightPt,
+          cellContentHeightPt,
           cell.verticalAlign,
         );
-        cell.textLines.forEach((lineText, lineIndex) => {
-          // 当前文本行基线 y 坐标。
-          const lineBaselineYPt = textStartBaselineYPt + style.lineHeightPt * lineIndex;
-          // 当前文本行 x 坐标。
-          const lineLeftXPt = getTableCellLineLeftXPt(pdf, lineText, cell.textAlign, cellLeftXPt, cellWidthPt);
-          pdf.text(lineText, lineLeftXPt, lineBaselineYPt);
+        writeTableCellContent(pdf, {
+          blocks: cell.blocks,
+          fallbackText: cell.text,
+          textAlign: cell.textAlign,
+          leftPt: cellLeftXPt + TABLE_CELL_PADDING_PT,
+          topYPt: contentTopYPt,
+          contentWidthPt: Math.max(cellWidthPt - TABLE_CELL_PADDING_PT * 2, 1),
+          fallbackStyle: style,
+          fontFamily,
         });
       });
       cursor.yPt = rowBottomYPt;

@@ -43,7 +43,7 @@ export {
 };
 
 /** 读取块级节点导出内容。 */
-export function getBlockExportContent(element: HTMLElement, exportRootElement: HTMLElement) {
+export function getBlockExportContent(element: HTMLElement, exportRootElement: HTMLElement, bodyFontSizePx = 16) {
   void exportRootElement;
-  return parseBlockExportContent(element);
+  return parseBlockExportContent(element, bodyFontSizePx);
 }

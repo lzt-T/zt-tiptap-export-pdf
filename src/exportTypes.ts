@@ -35,10 +35,20 @@ export type ExportTextBlockType = "blockquote" | "table" | "code" | "image" | "i
 /** 导出 RGB 颜色。 */
 export type ExportRgbColor = [number, number, number];
 
+/** 表格单元格内的块级内容。 */
+export interface ExportTableCellBlock {
+  /** 块级内容。 */
+  content: ExportTextBlockContent;
+  /** 块级样式。 */
+  style: ExportTextBlockStyle;
+}
+
 /** 表格单元格。 */
 export interface ExportTableCell {
   /** 单元格文本。 */
   text: string;
+  /** 单元格内块级内容。 */
+  blocks: ExportTableCellBlock[];
   /** 横向合并列数。 */
   colSpan: number;
   /** 纵向合并行数。 */

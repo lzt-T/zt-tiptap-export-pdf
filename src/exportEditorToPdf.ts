@@ -161,7 +161,7 @@ export async function exportEditorToPdf(
             ? await getInlineFormulaBlockContent(blockElement)
             : isInlineContentElement
               ? await getInlineContentBlockContent(blockElement)
-              : getBlockExportContent(blockElement, exportRootElement);
+              : await getBlockExportContent(blockElement, exportRootElement, bodyFontSizePx);
       if (
         !blockContent.text &&
         !shouldKeepEmptyTextPlaceholder(blockElement, isBlockFormulaElement, isImageElement, hasInlineFormulaElement)

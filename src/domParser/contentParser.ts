@@ -4,15 +4,15 @@ import { getTableRows } from "./tableParser";
 import { getBlockquoteText, getCodeBlockText } from "./textExtractor";
 
 /** 读取块级节点导出内容。 */
-export function getBlockExportContent(element: HTMLElement): ExportTextBlockContent {
+export async function getBlockExportContent(element: HTMLElement, bodyFontSizePx: number): Promise<ExportTextBlockContent> {
   if (element.tagName.toLowerCase() === "table") {
     // 表格行数据。
-    const rows = getTableRows(element);
+    const rows = await getTableRows(element, bodyFontSizePx);
     if (rows.length === 0) {
       return { text: "" };
     }
     // 是否全部为空单元格。
-    const isAllCellsEmpty = rows.every((row) => row.cells.every((cell) => !cell.text));
+    const isAllCellsEmpty = rows.every((row) => row.cells.every((cell) => !cell.text && cell.blocks.length === 0));
     if (isAllCellsEmpty) {
       return { text: "" };
     }
