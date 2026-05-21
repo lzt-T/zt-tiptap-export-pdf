@@ -4,13 +4,30 @@ import { type ExportTaskListMarker } from "../exportTypes";
 // 列表层级缩进兜底步长（px）。
 const DEFAULT_LIST_LEVEL_INDENT_PX = 32;
 
+/** 判断节点是否为列表容器。 */
+function isListElement(element: Element | null): element is HTMLUListElement | HTMLOListElement {
+  return element instanceof HTMLUListElement || element instanceof HTMLOListElement;
+}
+
+/** 判断节点是否为任务列表容器。 */
+function isTaskListElement(element: Element | null): element is HTMLUListElement {
+  return element instanceof HTMLUListElement && element.getAttribute("data-type") === "taskList";
+}
+
+/** 读取任务列表项首行复选框标签。 */
+function getTaskListItemLabelElement(element: HTMLElement): HTMLElement | null {
+  // 任务列表项复选框标签。
+  const checkboxLabelElement = element.querySelector(":scope > label");
+  return checkboxLabelElement instanceof HTMLElement ? checkboxLabelElement : null;
+}
+
 /** 判断列表项是否属于任务列表。 */
 export function isTaskListItem(element: HTMLElement): boolean {
   // 最近的列表容器。
   const closestList = element.closest("ul,ol");
   return (
     element.dataset.type === "taskItem" ||
-    closestList?.getAttribute("data-type") === "taskList" ||
+    isTaskListElement(closestList) ||
     element.querySelector('input[type="checkbox"]') instanceof HTMLInputElement
   );
 }
@@ -135,6 +152,119 @@ function resolveUnorderedListMarker(listStyleType: string): string {
   return LIST_ITEM_PREFIX;
 }
 
+/** 读取任务列表项首行复选框占位宽度（px）。 */
+function getTaskListMarkerSlotWidthPx(element: HTMLElement): number {
+  // 任务列表项复选框标签。
+  const checkboxLabelElement = getTaskListItemLabelElement(element);
+  if (!checkboxLabelElement) {
+    return 0;
+  }
+  // 任务列表项样式。
+  const listItemComputedStyle = window.getComputedStyle(element);
+  // 任务列表项横向间距（px）。
+  const columnGapPx = Number.parseFloat(listItemComputedStyle.columnGap) || 0;
+  // 任务列表项间距（px）。
+  const gapPx = columnGapPx || Number.parseFloat(listItemComputedStyle.gap) || 0;
+  // 复选框标签渲染宽度（px）。
+  const labelWidthPx = checkboxLabelElement.getBoundingClientRect().width || checkboxLabelElement.offsetWidth || 0;
+  return labelWidthPx + gapPx;
+}
+
+/** 读取元素渲染左坐标（px）。 */
+function getElementRenderLeftPx(element: HTMLElement): number {
+  // 元素布局矩形。
+  const elementRect = element.getBoundingClientRect();
+  return Number.isFinite(elementRect.left) ? elementRect.left : 0;
+}
+
+/** 读取任务列表层级根容器。 */
+function getTaskListRootElement(element: HTMLElement): HTMLUListElement | null {
+  // 当前任务列表容器。
+  let currentListElement = element.parentElement;
+  // 最外层任务列表容器。
+  let rootListElement: HTMLUListElement | null = null;
+  while (currentListElement) {
+    if (isTaskListElement(currentListElement)) {
+      rootListElement = currentListElement;
+    }
+    currentListElement = currentListElement.parentElement;
+  }
+  return rootListElement;
+}
+
+/** 读取任务列表根层级首个任务项。 */
+function getFirstTaskListItemElement(listElement: HTMLUListElement): HTMLElement | null {
+  // 首个任务列表项。
+  const firstTaskItemElement = Array.from(listElement.children).find(
+    (childElement): childElement is HTMLElement =>
+      childElement instanceof HTMLElement && childElement.dataset.type === "taskItem",
+  );
+  return firstTaskItemElement || null;
+}
+
+/** 读取任务列表视觉缩进（px）。 */
+function getTaskListVisualIndentPx(element: HTMLElement): number | null {
+  // 当前任务项复选框标签。
+  const currentLabelElement = getTaskListItemLabelElement(element);
+  if (!currentLabelElement) {
+    return null;
+  }
+  // 任务列表根容器。
+  const rootListElement = getTaskListRootElement(element);
+  if (!rootListElement) {
+    return null;
+  }
+  // 根层级首个任务项。
+  const firstTaskItemElement = getFirstTaskListItemElement(rootListElement);
+  if (!firstTaskItemElement) {
+    return null;
+  }
+  // 根层级复选框标签。
+  const rootLabelElement = getTaskListItemLabelElement(firstTaskItemElement);
+  if (!rootLabelElement) {
+    return null;
+  }
+  // 当前复选框左坐标（px）。
+  const currentLeftPx = getElementRenderLeftPx(currentLabelElement);
+  // 根复选框左坐标（px）。
+  const rootLeftPx = getElementRenderLeftPx(rootLabelElement);
+  // 视觉缩进（px）。
+  const indentPx = currentLeftPx - rootLeftPx;
+  return indentPx > 0 ? indentPx : 0;
+}
+
+/** 读取任务列表层级缩进步长（px）。 */
+function getTaskListIndentStepPx(element: HTMLElement): number {
+  // 当前遍历的任务项。
+  let currentElement: HTMLElement | null = element;
+  while (currentElement) {
+    // 任务列表项首行复选框占位宽度（px）。
+    const markerSlotWidthPx = getTaskListMarkerSlotWidthPx(currentElement);
+    if (markerSlotWidthPx > 0) {
+      return markerSlotWidthPx;
+    }
+    currentElement = currentElement.parentElement?.closest('li[data-type="taskItem"]') || null;
+  }
+  return DEFAULT_LIST_LEVEL_INDENT_PX;
+}
+
+/** 计算任务列表项左侧缩进（pt）。 */
+function getTaskListItemIndentPt(element: HTMLElement): number {
+  // 列表层级。
+  const listLevel = getListItemLevel(element);
+  // 任务列表视觉缩进（px）。
+  const visualIndentPx = getTaskListVisualIndentPx(element);
+  if (visualIndentPx !== null && visualIndentPx > 0) {
+    return visualIndentPx * CSS_PT_PER_PX;
+  }
+  if (listLevel <= 1) {
+    return 0;
+  }
+  // 任务列表层级缩进步长（px）。
+  const stepPx = getTaskListIndentStepPx(element);
+  return Math.max(listLevel - 1, 0) * stepPx * CSS_PT_PER_PX;
+}
+
 /** 读取最近有效列表容器的缩进步长（px）。 */
 function getListIndentStepPx(element: HTMLElement): number {
   // 当前遍历节点。
@@ -142,7 +272,7 @@ function getListIndentStepPx(element: HTMLElement): number {
   while (currentElement) {
     // 当前节点所属列表容器。
     const parentListElement = currentElement.parentElement;
-    if (parentListElement instanceof HTMLUListElement || parentListElement instanceof HTMLOListElement) {
+    if (isListElement(parentListElement)) {
       // 列表容器左内边距（px）。
       const paddingLeftPx = Number.parseFloat(window.getComputedStyle(parentListElement).paddingLeft) || 0;
       if (paddingLeftPx > 0) {
@@ -156,7 +286,10 @@ function getListIndentStepPx(element: HTMLElement): number {
 
 /** 计算列表项左侧缩进（pt）。 */
 export function getListItemIndentPt(element: HTMLElement): number {
-  if (!(element.parentElement instanceof HTMLUListElement || element.parentElement instanceof HTMLOListElement)) {
+  if (isTaskListItem(element)) {
+    return getTaskListItemIndentPt(element);
+  }
+  if (!isListElement(element.parentElement)) {
     return 0;
   }
   // 列表层级。
@@ -168,15 +301,15 @@ export function getListItemIndentPt(element: HTMLElement): number {
 
 /** 计算列表项嵌套层级。 */
 function getListItemLevel(element: HTMLElement): number {
-  // 当前遍历节点。
-  let currentElement: HTMLElement | null = element;
+  // 当前遍历的祖先节点。
+  let currentElement: HTMLElement | null = element.parentElement;
   // 列表层级（根层级为 1）。
   let level = 0;
   while (currentElement) {
-    if (currentElement.parentElement instanceof HTMLUListElement || currentElement.parentElement instanceof HTMLOListElement) {
+    if (isListElement(currentElement)) {
       level += 1;
     }
-    currentElement = currentElement.parentElement?.closest("li") || null;
+    currentElement = currentElement.parentElement;
   }
   return Math.max(level, 1);
 }

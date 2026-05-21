@@ -1,7 +1,9 @@
 # zt-tiptap-export-pdf
 
 使用 `jsPDF` 在浏览器中将 Tiptap / ProseMirror 编辑器正文节点导出为 PDF。
+
 仓库地址：[https://github.com/lzt-T/zt-tiptap-export-pdf](https://github.com/lzt-T/zt-tiptap-export-pdf)
+
 演示地址：[https://tiptap.xjoker.top/](https://tiptap.xjoker.top/)
 
 ## 安装
