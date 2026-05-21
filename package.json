@@ -1,6 +1,6 @@
 {
   "name": "zt-tiptap-export-pdf",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Export editor DOM content to PDF in browser using jsPDF",
   "type": "module",
   "main": "dist/index.js",
