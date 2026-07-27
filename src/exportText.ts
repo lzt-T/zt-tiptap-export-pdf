@@ -193,8 +193,10 @@ export function getTextBlockStyle(element: HTMLElement, bodyFontSizePx: number):
   const fontSizePt = pxToPt(elementFontSizePx);
   // 行高倍数。
   const lineHeightFactor = resolveLineHeightFactor(computedStyle, elementFontSizePx);
-  // 块后间距（pt）。
-  const marginBottomPt = pxToPt(parsePxValue(computedStyle.marginBottom)) || DEFAULT_BLOCK_MARGIN_BOTTOM_PT;
+  // 块后间距原始值（px）。
+  const marginBottomPx = Number.parseFloat(computedStyle.marginBottom);
+  // 块后间距（pt），保留合法的 0 值。
+  const marginBottomPt = Number.isFinite(marginBottomPx) ? pxToPt(marginBottomPx) : DEFAULT_BLOCK_MARGIN_BOTTOM_PT;
   // 代码块横向内边距（pt）。
   const paddingXPt = tagName === "pre" ? pxToPt(parsePxValue(computedStyle.paddingLeft)) : undefined;
   // 代码块纵向内边距（pt）。

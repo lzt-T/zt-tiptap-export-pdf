@@ -311,8 +311,7 @@ function getCellBlockHeightPt(pdf: JsPdfInstance, params: MeasureTextBlockParams
     return (
       codeLineCount * params.style.lineHeightPt +
       (params.style.paddingYPt || CODE_BLOCK_PADDING_Y_PT) * 2 +
-      params.style.marginBottomPt +
-      params.style.lineHeightPt * TABLE_CELL_TEXT_BASELINE_RATIO
+      params.style.marginBottomPt
     );
   }
   if (params.content.blockType === "image") {
@@ -322,17 +321,17 @@ function getCellBlockHeightPt(pdf: JsPdfInstance, params: MeasureTextBlockParams
     // 行内混合内容行数。
     const inlineLineCount = getInlineContentLineCount(pdf, params);
     return inlineLineCount > 0
-      ? params.style.lineHeightPt * (inlineLineCount + TABLE_CELL_TEXT_BASELINE_RATIO) + params.style.marginBottomPt
+      ? params.style.lineHeightPt * inlineLineCount + params.style.marginBottomPt
       : 0;
   }
   if (params.content.blockType === "blockquote") {
     // 引用块行数。
     const quoteLineCount = getBlockquoteLineCount(pdf, params);
-    return params.style.lineHeightPt * (quoteLineCount + TABLE_CELL_TEXT_BASELINE_RATIO) + params.style.marginBottomPt;
+    return params.style.lineHeightPt * quoteLineCount + params.style.marginBottomPt;
   }
   // 普通文本行数。
   const defaultLineCount = getDefaultTextLineCount(pdf, params);
-  return params.style.lineHeightPt * (defaultLineCount + TABLE_CELL_TEXT_BASELINE_RATIO) + params.style.marginBottomPt;
+  return params.style.lineHeightPt * defaultLineCount + params.style.marginBottomPt;
 }
 
 /** 读取单元格实际块列表。 */

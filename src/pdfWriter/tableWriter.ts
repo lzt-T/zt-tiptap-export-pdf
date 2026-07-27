@@ -10,8 +10,10 @@ import { setPdfDrawColor, setPdfFillColor } from "./shared";
 import { getTableCellContentHeightPt, writeTableCellContent } from "./tableCellContentWriter";
 import { type WriteTextBlockParams } from "./types";
 
-// 表格默认单元格内边距（pt）。
-const TABLE_CELL_PADDING_PT = 6;
+// 表格单元格水平内边距（pt，对应编辑器 12px）。
+const TABLE_CELL_HORIZONTAL_PADDING_PT = 9;
+// 表格单元格垂直内边距（pt，对应编辑器 8px）。
+const TABLE_CELL_VERTICAL_PADDING_PT = 6;
 // 表格边框宽度（pt）。
 const TABLE_BORDER_WIDTH_PT = 0.8;
 // 表格最小段后间距（pt）。
@@ -125,13 +127,13 @@ function getTableCellContentTopYPt(
   verticalAlign: "top" | "middle" | "bottom",
 ): number {
   // 单元格可用内容高度（pt）。
-  const availableContentHeightPt = Math.max(cellHeightPt - TABLE_CELL_PADDING_PT * 2, 0);
+  const availableContentHeightPt = Math.max(cellHeightPt - TABLE_CELL_VERTICAL_PADDING_PT * 2, 0);
   // 默认内容起始偏移（pt）。
-  let contentTopOffsetPt = TABLE_CELL_PADDING_PT;
+  let contentTopOffsetPt = TABLE_CELL_VERTICAL_PADDING_PT;
   if (verticalAlign === "middle") {
-    contentTopOffsetPt = TABLE_CELL_PADDING_PT + Math.max((availableContentHeightPt - contentHeightPt) / 2, 0);
+    contentTopOffsetPt = TABLE_CELL_VERTICAL_PADDING_PT + Math.max((availableContentHeightPt - contentHeightPt) / 2, 0);
   } else if (verticalAlign === "bottom") {
-    contentTopOffsetPt = TABLE_CELL_PADDING_PT + Math.max(availableContentHeightPt - contentHeightPt, 0);
+    contentTopOffsetPt = TABLE_CELL_VERTICAL_PADDING_PT + Math.max(availableContentHeightPt - contentHeightPt, 0);
   }
   return cellTopYPt + contentTopOffsetPt;
 }
@@ -143,7 +145,7 @@ function getTableRowHeights(
   lineHeightPt: number,
 ): number[] {
   // 每行高度（pt）。
-  const rowHeightsPt = Array.from({ length: rowCount }, () => lineHeightPt + TABLE_CELL_PADDING_PT * 2);
+  const rowHeightsPt = Array.from({ length: rowCount }, () => lineHeightPt + TABLE_CELL_VERTICAL_PADDING_PT * 2);
   renderCells.forEach((cell) => {
     if (cell.rowSpan === 1) {
       rowHeightsPt[cell.startRowIndex] = Math.max(rowHeightsPt[cell.startRowIndex], cell.requiredHeightPt);
@@ -242,7 +244,7 @@ export function writeTableTextBlock(
     // 单元格总宽度（pt）。
     const cellWidthPt = columnWidthPt * cell.colSpan;
     // 单元格内容可用宽度（pt）。
-    const cellContentWidthPt = Math.max(cellWidthPt - TABLE_CELL_PADDING_PT * 2, 1);
+    const cellContentWidthPt = Math.max(cellWidthPt - TABLE_CELL_HORIZONTAL_PADDING_PT * 2, 1);
     // 单元格最小高度（pt）。
     const requiredHeightPt =
       getTableCellContentHeightPt(pdf, {
@@ -255,7 +257,7 @@ export function writeTableTextBlock(
         fallbackStyle: style,
         fontFamily,
       }) +
-      TABLE_CELL_PADDING_PT * 2;
+      TABLE_CELL_VERTICAL_PADDING_PT * 2;
     return {
       ...cell,
       requiredHeightPt,
@@ -313,7 +315,7 @@ export function writeTableTextBlock(
         setPdfDrawColor(pdf, cell.borderColor || DEFAULT_MUTED_BORDER_COLOR);
         pdf.rect(cellLeftXPt, rowTopYPt, cellWidthPt, cellHeightPt, "S");
         // 单元格内容高度（pt）。
-        const cellContentHeightPt = Math.max(cell.requiredHeightPt - TABLE_CELL_PADDING_PT * 2, 0);
+        const cellContentHeightPt = Math.max(cell.requiredHeightPt - TABLE_CELL_VERTICAL_PADDING_PT * 2, 0);
         // 单元格内容顶部 y 坐标。
         const contentTopYPt = getTableCellContentTopYPt(
           rowTopYPt,
@@ -325,9 +327,9 @@ export function writeTableTextBlock(
           blocks: cell.blocks,
           fallbackText: cell.text,
           textAlign: cell.textAlign,
-          leftPt: cellLeftXPt + TABLE_CELL_PADDING_PT,
+          leftPt: cellLeftXPt + TABLE_CELL_HORIZONTAL_PADDING_PT,
           topYPt: contentTopYPt,
-          contentWidthPt: Math.max(cellWidthPt - TABLE_CELL_PADDING_PT * 2, 1),
+          contentWidthPt: Math.max(cellWidthPt - TABLE_CELL_HORIZONTAL_PADDING_PT * 2, 1),
           fallbackStyle: style,
           fontFamily,
         });
