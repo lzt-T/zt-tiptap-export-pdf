@@ -50,6 +50,8 @@ const LIGHT_EXPORT_THEME_VARIABLE_MAP: Record<string, string> = {
 };
 // 不应进入 PDF 的编辑临时状态类名。
 const TRANSIENT_EDITOR_STATE_CLASS_NAMES = ["ProseMirror-selectednode", "selectedCell", "zt-selection-mirror"];
+// 不应进入 PDF 的编辑控件选择器。
+const TRANSIENT_EDITOR_ELEMENT_SELECTOR = ".block-math-delete-btn-wrapper";
 
 /** 将离屏样式上下文固定为浅色导出主题。 */
 function applyLightExportTheme(element: HTMLElement): void {
@@ -58,14 +60,17 @@ function applyLightExportTheme(element: HTMLElement): void {
   });
 }
 
-/** 清除克隆内容中的选区和当前节点高亮类。 */
-function removeTransientEditorStateClasses(element: HTMLElement): void {
+/** 清除克隆内容中的编辑临时状态和控件。 */
+function removeTransientEditorState(element: HTMLElement): void {
   // 克隆根节点及其全部后代。
   const exportElements = [element, ...Array.from(element.querySelectorAll("*"))];
   exportElements.forEach((exportElement) => {
     TRANSIENT_EDITOR_STATE_CLASS_NAMES.forEach((className) => {
       exportElement.classList.remove(className);
     });
+  });
+  element.querySelectorAll(TRANSIENT_EDITOR_ELEMENT_SELECTOR).forEach((transientElement) => {
+    transientElement.remove();
   });
 }
 
@@ -143,10 +148,11 @@ export async function exportEditorToPdf(
   offscreenContainer.style.width = `${sourceRenderWidthPx}px`;
   offscreenContainer.style.height = "auto";
   offscreenContainer.style.overflow = "visible";
+  offscreenContainer.className = "zt-tiptap-theme";
+  applyLightExportTheme(offscreenContainer);
   // 补齐编辑器样式祖先，确保 .editor-wrapper .ProseMirror 规则生效。
   const styleContextWrapper = document.createElement("div");
-  styleContextWrapper.className = "zt-tiptap-theme editor-wrapper";
-  applyLightExportTheme(styleContextWrapper);
+  styleContextWrapper.className = "editor-wrapper";
   styleContextWrapper.style.width = `${renderWidthPx}px`;
   styleContextWrapper.style.height = "auto";
   styleContextWrapper.style.maxHeight = "none";
@@ -154,7 +160,7 @@ export async function exportEditorToPdf(
 
   // 克隆后的编辑区节点。
   const clonedElement = element.cloneNode(true) as HTMLElement;
-  removeTransientEditorStateClasses(clonedElement);
+  removeTransientEditorState(clonedElement);
   applyLightExportContentStyles(clonedElement);
   clonedElement.style.width = `${renderWidthPx}px`;
   clonedElement.style.color = "var(--ui-text-strong)";

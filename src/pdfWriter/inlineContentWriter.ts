@@ -259,8 +259,8 @@ function drawInlineCodeBackground(
 ): void {
   // 背景高度。
   const backgroundHeightPt = fontSizePt + fontSizePt * INLINE_CODE_PADDING_Y_RATIO * 2;
-  // 背景顶部坐标。
-  const backgroundTopPt = baselineYPt - fontSizePt * 0.82;
+  // 包含纵向内边距的背景顶部坐标。
+  const backgroundTopPt = baselineYPt - fontSizePt * 0.82 - fontSizePt * INLINE_CODE_PADDING_Y_RATIO;
   setPdfFillColor(pdf, backgroundColor);
   pdf.roundedRect(leftPt, backgroundTopPt, widthPt, backgroundHeightPt, 2, 2, "F");
 }
