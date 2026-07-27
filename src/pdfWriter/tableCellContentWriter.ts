@@ -24,8 +24,6 @@ const TASK_MARKER_SIZE_RATIO = 0.72;
 const TASK_MARKER_GAP_RATIO = 0.45;
 // 任务列表方框最小尺寸（pt）。
 const TASK_MARKER_MIN_SIZE_PT = 7;
-// 列表内容槽位最小宽度（em）。
-const LIST_CONTENT_SLOT_MIN_EM = 1.6;
 // 行内图片最大行高占比。
 const INLINE_IMAGE_MAX_LINE_HEIGHT_RATIO = 0.9;
 // 行内代码横向内边距比例。
@@ -144,11 +142,10 @@ function getListContentSlotWidthPt(pdf: JsPdfInstance, content: ExportTextBlockC
   const taskMarkerSlotWidthPt = content.taskListMarker ? taskMarkerSizePt + style.fontSizePt * TASK_MARKER_GAP_RATIO : 0;
   // 列表 marker 槽位宽度。
   const listMarkerSlotWidthPt = content.listMarker ? pdf.getTextWidth(content.listMarker) : 0;
-  // 列表内容槽位最小宽度。
-  const listContentMinSlotWidthPt = style.fontSizePt * LIST_CONTENT_SLOT_MIN_EM;
-  return content.listMarker || content.taskListMarker
-    ? Math.max(listContentMinSlotWidthPt, listMarkerSlotWidthPt, taskMarkerSlotWidthPt)
-    : 0;
+  if (content.taskListMarker) {
+    return taskMarkerSlotWidthPt;
+  }
+  return listMarkerSlotWidthPt;
 }
 
 /** 计算文本内容实际可用宽度。 */

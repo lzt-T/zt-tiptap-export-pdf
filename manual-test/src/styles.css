@@ -1,11 +1,204 @@
+:root {
+  color: #172033;
+  background: #f4f6f8;
+  font-family:
+    Inter, "PingFang SC", "Microsoft YaHei", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-synthesis: none;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  min-width: 320px;
+  margin: 0;
+  background: #f4f6f8;
+}
+
 .ManualTestPage {
-  max-width: 960px;
-  margin: 24px auto;
-  padding: 0 16px 24px;
+  width: min(1180px, 100%);
+  min-height: 100vh;
+  margin: 0 auto;
+  padding: 56px 28px 72px;
+}
+
+.ManualTestPage__Header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 32px;
+  padding-bottom: 32px;
+  border-bottom: 1px solid #dbe1e8;
+}
+
+.ManualTestPage__HeadingGroup {
+  max-width: 760px;
+}
+
+.ManualTestPage__Kicker {
+  margin: 0 0 10px;
+  color: #2563eb;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .ManualTestPage__Title {
-  margin: 0 0 16px;
-  font-size: 20px;
-  font-weight: 600;
+  margin: 0;
+  color: #111827;
+  font-size: clamp(30px, 4vw, 46px);
+  font-weight: 750;
+  letter-spacing: -0.025em;
+  line-height: 1.15;
+  text-wrap: balance;
+}
+
+.ManualTestPage__Description {
+  max-width: 68ch;
+  margin: 16px 0 0;
+  color: #526174;
+  font-size: 16px;
+  line-height: 1.75;
+}
+
+.ManualTestPage__Status {
+  flex: 0 0 auto;
+  margin-top: 4px;
+  padding: 8px 13px;
+  border-radius: 999px;
+  color: #166534;
+  background: #dcfce7;
+  font-size: 13px;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.ManualTestPage__Guide {
+  display: grid;
+  grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
+  gap: 48px;
+  padding: 34px 0 38px;
+}
+
+.ManualTestPage__GuideColumn {
+  min-width: 0;
+}
+
+.ManualTestPage__SectionTitle {
+  margin: 0 0 14px;
+  color: #172033;
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.ManualTestPage__Steps {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding-left: 24px;
+  color: #465569;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.ManualTestPage__Steps li::marker {
+  color: #2563eb;
+  font-weight: 700;
+}
+
+.ManualTestPage__CoverageList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ManualTestPage__CoverageList li {
+  padding: 7px 11px;
+  border: 1px solid #d7dee8;
+  border-radius: 999px;
+  color: #3f4d61;
+  background: #ffffff;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.ManualTestPage__Workspace {
+  overflow: hidden;
+  border: 1px solid #d9e0e8;
+  border-radius: 16px;
+  background: #ffffff;
+}
+
+.ManualTestPage__WorkspaceHeading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 22px 24px;
+  border-bottom: 1px solid #e5e9ef;
+}
+
+.ManualTestPage__WorkspaceHeading .ManualTestPage__SectionTitle {
+  margin-bottom: 5px;
+}
+
+.ManualTestPage__WorkspaceDescription,
+.ManualTestPage__ExportHint {
+  margin: 0;
+  color: #64748b;
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.ManualTestPage__ExportHint {
+  max-width: 220px;
+  padding-top: 3px;
+  text-align: right;
+}
+
+.ManualTestPage__Editor {
+  padding: 24px;
+}
+
+.ManualTestPage__Editor .editor-container {
+  min-width: 0;
+}
+
+@media (max-width: 720px) {
+  .ManualTestPage {
+    padding: 32px 16px 48px;
+  }
+
+  .ManualTestPage__Header,
+  .ManualTestPage__WorkspaceHeading {
+    flex-direction: column;
+    gap: 18px;
+  }
+
+  .ManualTestPage__Status {
+    margin-top: 0;
+  }
+
+  .ManualTestPage__Guide {
+    grid-template-columns: 1fr;
+    gap: 28px;
+    padding: 28px 0 32px;
+  }
+
+  .ManualTestPage__WorkspaceHeading,
+  .ManualTestPage__Editor {
+    padding: 18px;
+  }
+
+  .ManualTestPage__ExportHint {
+    max-width: none;
+    padding-top: 0;
+    text-align: left;
+  }
 }

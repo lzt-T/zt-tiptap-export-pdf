@@ -172,6 +172,10 @@ export function getTextBlockStyle(element: HTMLElement, bodyFontSizePx: number):
   const elementFontSizePx = parsePxValue(computedStyle.fontSize) || bodyFontSizePx;
   // 文本块左侧缩进（pt）。
   const indentLeftPt = resolveIndentLeftPt(tagName, computedStyle);
+  // 块前间距原始值（px）。
+  const marginTopPx = Number.parseFloat(computedStyle.marginTop);
+  // 块前间距（pt），无法解析时不增加额外间距。
+  const marginTopPt = Number.isFinite(marginTopPx) ? pxToPt(marginTopPx) : 0;
   if (isHeadingTagName(tagName)) {
     // 标题固定样式。
     const headingStyle = EXPORT_HEADING_STYLE_MAP[tagName];
@@ -180,6 +184,7 @@ export function getTextBlockStyle(element: HTMLElement, bodyFontSizePx: number):
     return {
       fontSizePt: headingFontSizePt,
       lineHeightPt: headingFontSizePt * Number.parseFloat(headingStyle.lineHeight),
+      marginTopPt,
       marginBottomPt: headingStyle.marginBottomPt,
       indentLeftPt,
       textAlign,
@@ -204,6 +209,7 @@ export function getTextBlockStyle(element: HTMLElement, bodyFontSizePx: number):
   return {
     fontSizePt,
     lineHeightPt: fontSizePt * lineHeightFactor,
+    marginTopPt,
     marginBottomPt,
     indentLeftPt,
     paddingXPt,

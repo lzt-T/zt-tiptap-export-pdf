@@ -205,6 +205,8 @@ export async function exportEditorToPdf(
     };
     // 需要导出的块级节点。
     const blockElements = getExportBlockElements(exportRootElement);
+    // 上一个已写入块的块后间距，用于模拟 CSS 相邻外边距折叠。
+    let previousBlockMarginBottomPt: number | undefined;
 
     for (const blockElement of blockElements) {
       // 是否为块级公式。
@@ -233,6 +235,14 @@ export async function exportEditorToPdf(
       }
       // 块级文本样式。
       const blockStyle = getTextBlockStyle(blockElement, bodyFontSizePx);
+      if (previousBlockMarginBottomPt !== undefined) {
+        // 当前块尚未由上一块块后间距覆盖的块前间距。
+        const additionalMarginTopPt = Math.max(
+          blockStyle.marginTopPt - previousBlockMarginBottomPt,
+          0,
+        );
+        cursor.yPt += additionalMarginTopPt;
+      }
       writeTextBlock(pdf, cursor, {
         text: blockContent.text,
         style: blockStyle,
@@ -247,6 +257,7 @@ export async function exportEditorToPdf(
         imageCaptionText: blockContent.imageCaptionText,
         inlineContent: blockContent.inlineContent,
       });
+      previousBlockMarginBottomPt = blockStyle.marginBottomPt;
     }
 
     pdf.save(resolvedFilename);

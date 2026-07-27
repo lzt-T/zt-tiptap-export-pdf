@@ -12,6 +12,8 @@ export interface ExportTextBlockStyle {
   fontSizePt: number;
   /** 行高（pt）。 */
   lineHeightPt: number;
+  /** 块前间距（pt）。 */
+  marginTopPt: number;
   /** 块后间距（pt）。 */
   marginBottomPt: number;
   /** 左侧缩进（pt）。 */

@@ -26,8 +26,8 @@ const TASK_MARKER_SIZE_RATIO = 0.72;
 const TASK_MARKER_GAP_RATIO = 0.45;
 // 任务列表方框最小尺寸（pt）。
 const TASK_MARKER_MIN_SIZE_PT = 7;
-// 列表内容槽位最小宽度（em）。
-const LIST_CONTENT_SLOT_MIN_EM = 1.6;
+// 任务列表首行文字视觉中心相对基线的字号偏移比例。
+const TASK_MARKER_TEXT_CENTER_OFFSET_RATIO = 0.4;
 // 行内图片最大行高占比。
 const INLINE_IMAGE_MAX_LINE_HEIGHT_RATIO = 0.9;
 // 行内图片基线对齐比例。
@@ -113,11 +113,13 @@ function drawTaskListMarker(
   marker: ExportTaskListMarker,
   leftPt: number,
   baselineYPt: number,
+  fontSizePt: number,
   markerSizePt: number,
   markerStyle?: ExportTaskListMarkerStyle,
 ): void {
   // 方框顶部坐标。
-  const markerTopPt = baselineYPt - markerSizePt * 0.8;
+  const markerTopPt =
+    baselineYPt - fontSizePt * TASK_MARKER_TEXT_CENTER_OFFSET_RATIO - markerSizePt / 2;
   // 方框边框颜色。
   const borderColor = markerStyle?.borderColor || DEFAULT_MUTED_BORDER_COLOR;
   // 方框背景颜色。
@@ -368,13 +370,8 @@ export function writeInlineContentTextBlock(
   const taskMarkerSlotWidthPt = taskListMarker ? taskMarkerSizePt + style.fontSizePt * TASK_MARKER_GAP_RATIO : 0;
   // 列表 marker 文本宽度。
   const listMarkerSlotWidthPt = listMarker ? pdf.getTextWidth(listMarker) : 0;
-  // 列表内容槽位最小宽度。
-  const listContentMinSlotWidthPt = style.fontSizePt * LIST_CONTENT_SLOT_MIN_EM;
   // 列表内容槽位宽度。
-  const listContentSlotWidthPt =
-    listMarker || taskListMarker
-      ? Math.max(listContentMinSlotWidthPt, listMarkerSlotWidthPt, taskMarkerSlotWidthPt)
-      : 0;
+  const listContentSlotWidthPt = taskListMarker ? taskMarkerSlotWidthPt : listMarkerSlotWidthPt;
   // 行起始 x 坐标。
   const lineLeftPt = cursor.leftPt + blockIndentLeftPt + listTextIndentPt + listContentSlotWidthPt;
   // 行结束 x 坐标。
@@ -501,6 +498,7 @@ export function writeInlineContentTextBlock(
         taskListMarker,
         cursor.leftPt + blockIndentLeftPt + listTextIndentPt,
         cursor.yPt,
+        style.fontSizePt,
         taskMarkerSizePt,
         taskListMarkerStyle,
       );
