@@ -1,8 +1,14 @@
 import { type jsPDF as JsPdfInstance } from "jspdf";
-import { CODE_BLOCK_FILL_GRAY, CODE_BLOCK_PADDING_X_PT, CODE_BLOCK_PADDING_Y_PT, PDF_TOP_MARGIN_PT } from "../exportConstants";
+import {
+  CODE_BLOCK_PADDING_X_PT,
+  CODE_BLOCK_PADDING_Y_PT,
+  DEFAULT_CODE_BLOCK_BACKGROUND_COLOR,
+  PDF_TOP_MARGIN_PT,
+} from "../exportConstants";
 import { splitTextToLines } from "../exportText";
 import { type PdfWriteCursor } from "../exportTypes";
 import { type WriteTextBlockParams } from "./types";
+import { setPdfFillColor, setPdfTextColor } from "./shared";
 
 /** 计算代码块文本行（先保留原始换行，再按宽度折行）。 */
 function getCodeBlockLines(pdf: JsPdfInstance, text: string, textWidthPt: number): string[] {
@@ -32,6 +38,7 @@ export function writeCodeTextBlock(
 ): void {
   pdf.setFont(fontFamily, style.fontStyle);
   pdf.setFontSize(style.fontSizePt);
+  setPdfTextColor(pdf, style.color);
   // 代码块横向内边距。
   const codePaddingXPt = style.paddingXPt || CODE_BLOCK_PADDING_X_PT;
   // 代码块纵向内边距。
@@ -53,7 +60,9 @@ export function writeCodeTextBlock(
     cursor.yPt = PDF_TOP_MARGIN_PT;
     codeBlockTopYPt = cursor.yPt;
   }
-  pdf.setFillColor(CODE_BLOCK_FILL_GRAY, CODE_BLOCK_FILL_GRAY, CODE_BLOCK_FILL_GRAY);
+  // 代码块实际背景颜色。
+  const codeBlockBackgroundColor = style.backgroundColor || DEFAULT_CODE_BLOCK_BACKGROUND_COLOR;
+  setPdfFillColor(pdf, codeBlockBackgroundColor);
   pdf.rect(cursor.leftPt, codeBlockTopYPt, cursor.contentWidthPt, codeBlockHeightPt, "F");
   // 代码块文本当前基线 y 坐标。
   let lineBaselineYPt = codeBlockTopYPt + codePaddingYPt + textBaselineOffsetPt;

@@ -1,4 +1,5 @@
 import { BUILTIN_FONT_FAMILY } from "./font";
+import { type ExportRgbColor } from "./exportTypes";
 
 // 默认 PDF 文件名。
 export const DEFAULT_PDF_FILENAME = "editor.pdf";
@@ -26,8 +27,20 @@ export const DEFAULT_BLOCK_MARGIN_BOTTOM_PT = 8;
 export const DEFAULT_BLOCKQUOTE_INDENT_PT = 14;
 // 引用块左侧竖线宽度（pt）。
 export const BLOCKQUOTE_LINE_WIDTH_PT = 1;
-// 代码块背景灰度值。
-export const CODE_BLOCK_FILL_GRAY = 240;
+// 默认导出文本颜色。
+export const DEFAULT_EXPORT_TEXT_COLOR: ExportRgbColor = [17, 24, 39];
+// 默认导出背景颜色。
+export const DEFAULT_EXPORT_BACKGROUND_COLOR: ExportRgbColor = [255, 255, 255];
+// 默认代码块背景颜色。
+export const DEFAULT_CODE_BLOCK_BACKGROUND_COLOR: ExportRgbColor = [240, 244, 251];
+// 默认行内代码背景颜色。
+export const DEFAULT_INLINE_CODE_BACKGROUND_COLOR: ExportRgbColor = [241, 245, 249];
+// 默认链接文本颜色。
+export const DEFAULT_LINK_TEXT_COLOR: ExportRgbColor = [29, 78, 216];
+// 默认弱边框颜色。
+export const DEFAULT_MUTED_BORDER_COLOR: ExportRgbColor = [226, 232, 240];
+// 默认表头背景颜色。
+export const DEFAULT_TABLE_HEADER_BACKGROUND_COLOR: ExportRgbColor = [248, 250, 252];
 // 代码块左右内边距（pt）。
 export const CODE_BLOCK_PADDING_X_PT = 8;
 // 代码块上下内边距（pt）。

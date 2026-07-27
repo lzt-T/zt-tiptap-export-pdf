@@ -1,5 +1,12 @@
 import { type ExportTextBlockContent } from "../exportTypes";
-import { getListItemIndentPt, getListItemPrefix, getListItemText, getTaskListMarker, isTaskListItem } from "./listParser";
+import {
+  getListItemIndentPt,
+  getListItemPrefix,
+  getListItemText,
+  getTaskListMarker,
+  getTaskListMarkerStyle,
+  isTaskListItem,
+} from "./listParser";
 import { getTableRows } from "./tableParser";
 import { getBlockquoteText, getCodeBlockText } from "./textExtractor";
 
@@ -61,6 +68,7 @@ export async function getBlockExportContent(element: HTMLElement, bodyFontSizePx
       return {
         text: normalizedText,
         taskListMarker: getTaskListMarker(element),
+        taskListMarkerStyle: getTaskListMarkerStyle(element),
         listIndentPt,
       };
     }

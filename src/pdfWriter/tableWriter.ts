@@ -1,6 +1,12 @@
 import { type jsPDF as JsPdfInstance } from "jspdf";
-import { DEFAULT_BLOCK_MARGIN_BOTTOM_PT, PDF_TOP_MARGIN_PT } from "../exportConstants";
-import { type ExportTableCellBlock, type ExportTableContent, type PdfWriteCursor } from "../exportTypes";
+import {
+  DEFAULT_BLOCK_MARGIN_BOTTOM_PT,
+  DEFAULT_MUTED_BORDER_COLOR,
+  DEFAULT_TABLE_HEADER_BACKGROUND_COLOR,
+  PDF_TOP_MARGIN_PT,
+} from "../exportConstants";
+import { type ExportRgbColor, type ExportTableCellBlock, type ExportTableContent, type PdfWriteCursor } from "../exportTypes";
+import { setPdfDrawColor, setPdfFillColor } from "./shared";
 import { getTableCellContentHeightPt, writeTableCellContent } from "./tableCellContentWriter";
 import { type WriteTextBlockParams } from "./types";
 
@@ -8,8 +14,6 @@ import { type WriteTextBlockParams } from "./types";
 const TABLE_CELL_PADDING_PT = 6;
 // 表格边框宽度（pt）。
 const TABLE_BORDER_WIDTH_PT = 0.8;
-// 表头背景色灰度值。
-const TABLE_HEADER_FILL_GRAY = 243;
 // 表格最小段后间距（pt）。
 const TABLE_MARGIN_BOTTOM_PT = DEFAULT_BLOCK_MARGIN_BOTTOM_PT;
 // 表格后下一段文本首行基线偏移比例。
@@ -35,6 +39,10 @@ interface TableLayoutCell {
   textAlign: "left" | "center" | "right";
   /** 垂直对齐。 */
   verticalAlign: "top" | "middle" | "bottom";
+  /** 单元格背景颜色。 */
+  backgroundColor?: ExportRgbColor;
+  /** 单元格边框颜色。 */
+  borderColor?: ExportRgbColor;
 }
 
 /** 表格布局结果。 */
@@ -78,6 +86,7 @@ function buildTableLayout(tableContent: ExportTableContent): TableLayoutResult {
       // 当前单元格纵向跨度。
       const normalizedRowSpan = Math.max(cell.rowSpan || 1, 1);
       for (let spanOffset = 0; spanOffset < normalizedColSpan; spanOffset += 1) {
+        // 当前被占用的列索引。
         const blockedColumnIndex = currentColumnIndex + spanOffset;
         columnBlockedUntilRowIndexes[blockedColumnIndex] = Math.max(
           columnBlockedUntilRowIndexes[blockedColumnIndex] || 0,
@@ -94,6 +103,8 @@ function buildTableLayout(tableContent: ExportTableContent): TableLayoutResult {
         isHeaderRow: row.isHeaderRow,
         textAlign: cell.textAlign,
         verticalAlign: cell.verticalAlign,
+        backgroundColor: cell.backgroundColor,
+        borderColor: cell.borderColor,
       });
       currentColumnIndex += normalizedColSpan;
     });
@@ -172,6 +183,7 @@ function getRowCoveredByPreviousRowSpanMap(renderCells: TableRenderCell[], rowCo
     if (cell.rowSpan <= 1) {
       return;
     }
+    // 合并单元格结束行索引（不含）。
     const endRowIndex = Math.min(cell.startRowIndex + cell.rowSpan, rowCount);
     for (let rowIndex = cell.startRowIndex + 1; rowIndex < endRowIndex; rowIndex += 1) {
       coveredMap[rowIndex] = true;
@@ -221,7 +233,6 @@ export function writeTableTextBlock(
   }
   pdf.setFont(fontFamily, style.fontStyle);
   pdf.setFontSize(style.fontSizePt);
-  pdf.setDrawColor(180, 180, 180);
   pdf.setLineWidth(TABLE_BORDER_WIDTH_PT);
 
   // 列宽（pt）。
@@ -292,10 +303,14 @@ export function writeTableTextBlock(
         const cellLeftXPt = cursor.leftPt + columnWidthPt * cell.startColumnIndex;
         // 单元格总宽度（pt）。
         const cellWidthPt = columnWidthPt * cell.colSpan;
-        if (cell.isHeaderRow) {
-          pdf.setFillColor(TABLE_HEADER_FILL_GRAY, TABLE_HEADER_FILL_GRAY, TABLE_HEADER_FILL_GRAY);
+        // 单元格实际背景颜色。
+        const cellBackgroundColor =
+          cell.backgroundColor || (cell.isHeaderRow ? DEFAULT_TABLE_HEADER_BACKGROUND_COLOR : undefined);
+        if (cellBackgroundColor) {
+          setPdfFillColor(pdf, cellBackgroundColor);
           pdf.rect(cellLeftXPt, rowTopYPt, cellWidthPt, cellHeightPt, "F");
         }
+        setPdfDrawColor(pdf, cell.borderColor || DEFAULT_MUTED_BORDER_COLOR);
         pdf.rect(cellLeftXPt, rowTopYPt, cellWidthPt, cellHeightPt, "S");
         // 单元格内容高度（pt）。
         const cellContentHeightPt = Math.max(cell.requiredHeightPt - TABLE_CELL_PADDING_PT * 2, 0);

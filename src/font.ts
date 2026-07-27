@@ -5,7 +5,7 @@ import { BUILTIN_CHINESE_FONT_BASE64 } from "./fonts/builtinChineseFontBase64";
 import { BUILTIN_CHINESE_ITALIC_FONT_BASE64 } from "./fonts/builtinChineseItalicFontBase64";
 
 /** 内置常规字体在 VFS 中的文件名。 */
-const BUILTIN_REGULAR_FONT_FILE_NAME = "NotoSansSC-VF.ttf";
+const BUILTIN_REGULAR_FONT_FILE_NAME = "NotoSansSC-Regular.ttf";
 /** 内置粗体字体在 VFS 中的文件名。 */
 const BUILTIN_BOLD_FONT_FILE_NAME = "NotoSansSC-Bold.ttf";
 /** 内置斜体字体在 VFS 中的文件名。 */

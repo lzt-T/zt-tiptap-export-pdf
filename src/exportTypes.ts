@@ -24,10 +24,26 @@ export interface ExportTextBlockStyle {
   textAlign: "left" | "center" | "right" | "justify";
   /** PDF 字体样式。 */
   fontStyle: "normal";
+  /** 块级文本颜色。 */
+  color?: ExportRgbColor;
+  /** 块级背景颜色。 */
+  backgroundColor?: ExportRgbColor;
+  /** 块级左边框颜色。 */
+  borderLeftColor?: ExportRgbColor;
 }
 
 /** 任务列表标记状态。 */
 export type ExportTaskListMarker = "unchecked" | "checked";
+
+/** 任务列表标记颜色样式。 */
+export interface ExportTaskListMarkerStyle {
+  /** 方框边框颜色。 */
+  borderColor?: ExportRgbColor;
+  /** 方框背景颜色。 */
+  backgroundColor?: ExportRgbColor;
+  /** 勾选符号颜色。 */
+  checkColor?: ExportRgbColor;
+}
 
 /** 导出文本块类型。 */
 export type ExportTextBlockType = "blockquote" | "table" | "code" | "image" | "inlineContent";
@@ -57,6 +73,10 @@ export interface ExportTableCell {
   textAlign: "left" | "center" | "right";
   /** 垂直对齐。 */
   verticalAlign: "top" | "middle" | "bottom";
+  /** 单元格背景颜色。 */
+  backgroundColor?: ExportRgbColor;
+  /** 单元格边框颜色。 */
+  borderColor?: ExportRgbColor;
 }
 
 /** 表格行。 */
@@ -140,6 +160,8 @@ export interface ExportTextBlockContent {
   inlineContent?: ExportInlineContentRun[];
   /** 任务列表标记。 */
   taskListMarker?: ExportTaskListMarker;
+  /** 任务列表标记颜色样式。 */
+  taskListMarkerStyle?: ExportTaskListMarkerStyle;
   /** 列表项前缀文本（如 1. / a. / i. / •）。 */
   listMarker?: string;
   /** 列表项左侧缩进（pt）。 */

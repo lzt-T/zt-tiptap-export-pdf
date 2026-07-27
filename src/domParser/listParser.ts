@@ -1,5 +1,6 @@
 import { CSS_PT_PER_PX, LIST_ITEM_PREFIX } from "../exportConstants";
-import { type ExportTaskListMarker } from "../exportTypes";
+import { parseCssRgbColor } from "../exportText";
+import { type ExportTaskListMarker, type ExportTaskListMarkerStyle } from "../exportTypes";
 
 // 列表层级缩进兜底步长（px）。
 const DEFAULT_LIST_LEVEL_INDENT_PX = 32;
@@ -43,6 +44,26 @@ export function getTaskListMarker(element: HTMLElement): ExportTaskListMarker {
     return "checked";
   }
   return "unchecked";
+}
+
+/** 获取任务列表项标记的计算颜色。 */
+export function getTaskListMarkerStyle(element: HTMLElement): ExportTaskListMarkerStyle | undefined {
+  // 任务复选框。
+  const checkboxElement = element.querySelector('input[type="checkbox"]');
+  if (!(checkboxElement instanceof HTMLInputElement)) {
+    return undefined;
+  }
+  // 复选框计算样式。
+  const checkboxComputedStyle = window.getComputedStyle(checkboxElement);
+  // 勾选符号节点。
+  const checkElement = element.querySelector(".task-item-checkmark");
+  // 勾选符号计算颜色。
+  const checkColor = checkElement instanceof HTMLElement ? parseCssRgbColor(window.getComputedStyle(checkElement).color) : undefined;
+  return {
+    borderColor: parseCssRgbColor(checkboxComputedStyle.borderTopColor),
+    backgroundColor: parseCssRgbColor(checkboxComputedStyle.backgroundColor),
+    checkColor,
+  };
 }
 
 /** 获取有序列表项序号前缀。 */

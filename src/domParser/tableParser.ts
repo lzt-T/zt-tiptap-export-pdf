@@ -1,4 +1,4 @@
-import { getTextBlockStyle } from "../exportText";
+import { getTextBlockStyle, parseCssRgbColor } from "../exportText";
 import { type ExportTableCellBlock, type ExportTableRow, type ExportTextBlockContent } from "../exportTypes";
 import {
   getFormulaImageBlockContent,
@@ -163,6 +163,7 @@ export async function getTableRows(element: HTMLElement, bodyFontSizePx: number)
       if (!(tableCellElement instanceof HTMLElement)) {
         return false;
       }
+      // 单元格标签名。
       const tagName = tableCellElement.tagName.toLowerCase();
       return tagName === "th" || tagName === "td";
     });
@@ -171,14 +172,20 @@ export async function getTableRows(element: HTMLElement, bodyFontSizePx: number)
     }
     // 当前行单元格列表。
     const cells = await Promise.all(
-      tableCellElements.map(async (tableCellElement) => ({
-        text: getTableCellText(tableCellElement),
-        blocks: await getTableCellBlocks(tableCellElement, bodyFontSizePx),
-        colSpan: parseTableCellSpan(tableCellElement.getAttribute("colspan")),
-        rowSpan: parseTableCellSpan(tableCellElement.getAttribute("rowspan")),
-        textAlign: parseTableCellTextAlign(tableCellElement),
-        verticalAlign: parseTableCellVerticalAlign(tableCellElement),
-      })),
+      tableCellElements.map(async (tableCellElement) => {
+        // 单元格计算样式。
+        const computedStyle = window.getComputedStyle(tableCellElement);
+        return {
+          text: getTableCellText(tableCellElement),
+          blocks: await getTableCellBlocks(tableCellElement, bodyFontSizePx),
+          colSpan: parseTableCellSpan(tableCellElement.getAttribute("colspan")),
+          rowSpan: parseTableCellSpan(tableCellElement.getAttribute("rowspan")),
+          textAlign: parseTableCellTextAlign(tableCellElement),
+          verticalAlign: parseTableCellVerticalAlign(tableCellElement),
+          backgroundColor: parseCssRgbColor(computedStyle.backgroundColor),
+          borderColor: parseCssRgbColor(computedStyle.borderTopColor),
+        };
+      }),
     );
     tableRows.push({
       cells,

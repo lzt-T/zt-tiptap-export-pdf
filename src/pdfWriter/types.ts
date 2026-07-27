@@ -4,6 +4,7 @@ import {
   type ExportInlineContentRun,
   type ExportTableContent,
   type ExportTaskListMarker,
+  type ExportTaskListMarkerStyle,
   type ExportTextBlockStyle,
   type ExportTextBlockType,
   type PdfWriteCursor,
@@ -19,6 +20,8 @@ export interface WriteTextBlockParams {
   fontFamily: string;
   /** 任务列表标记。 */
   taskListMarker?: ExportTaskListMarker;
+  /** 任务列表标记颜色样式。 */
+  taskListMarkerStyle?: ExportTaskListMarkerStyle;
   /** 列表项前缀文本。 */
   listMarker?: string;
   /** 列表项左侧缩进（pt）。 */

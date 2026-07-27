@@ -1,15 +1,23 @@
 import { type jsPDF as JsPdfInstance } from "jspdf";
-import { CSS_PT_PER_PX } from "../exportConstants";
+import {
+  CSS_PT_PER_PX,
+  DEFAULT_EXPORT_BACKGROUND_COLOR,
+  DEFAULT_EXPORT_TEXT_COLOR,
+  DEFAULT_INLINE_CODE_BACKGROUND_COLOR,
+  DEFAULT_LINK_TEXT_COLOR,
+  DEFAULT_MUTED_BORDER_COLOR,
+} from "../exportConstants";
 import {
   type ExportImageContent,
   type ExportInlineContentRun,
   type ExportInlineTextStyle,
   type ExportRgbColor,
   type ExportTaskListMarker,
+  type ExportTaskListMarkerStyle,
   type ExportTextBlockStyle,
   type PdfWriteCursor,
 } from "../exportTypes";
-import { ensureLineSpace } from "./shared";
+import { ensureLineSpace, setPdfDrawColor, setPdfFillColor, setPdfTextColor } from "./shared";
 import { type WriteTextBlockParams } from "./types";
 
 // 任务列表方框字号比例。
@@ -35,13 +43,6 @@ const INLINE_SCRIPT_BASELINE_OFFSET_RATIO_MAP: Record<NonNullable<ExportInlineTe
   super: -0.35,
   sub: 0.2,
 };
-// 行内代码背景色。
-const INLINE_CODE_BACKGROUND_COLOR: ExportRgbColor = [241, 245, 249];
-// 链接文本颜色。
-const LINK_TEXT_COLOR: ExportRgbColor = [29, 78, 216];
-// 默认文本颜色。
-const DEFAULT_TEXT_COLOR: ExportRgbColor = [17, 17, 17];
-
 /** 行内图片导出尺寸。 */
 interface InlineImageSizePt {
   /** 图片宽度（pt）。 */
@@ -113,12 +114,19 @@ function drawTaskListMarker(
   leftPt: number,
   baselineYPt: number,
   markerSizePt: number,
+  markerStyle?: ExportTaskListMarkerStyle,
 ): void {
   // 方框顶部坐标。
   const markerTopPt = baselineYPt - markerSizePt * 0.8;
-  pdf.setDrawColor(17, 17, 17);
+  // 方框边框颜色。
+  const borderColor = markerStyle?.borderColor || DEFAULT_MUTED_BORDER_COLOR;
+  // 方框背景颜色。
+  const backgroundColor =
+    markerStyle?.backgroundColor || (marker === "checked" ? DEFAULT_EXPORT_TEXT_COLOR : DEFAULT_EXPORT_BACKGROUND_COLOR);
+  setPdfDrawColor(pdf, borderColor);
+  setPdfFillColor(pdf, backgroundColor);
   pdf.setLineWidth(0.8);
-  pdf.rect(leftPt, markerTopPt, markerSizePt, markerSizePt, "S");
+  pdf.rect(leftPt, markerTopPt, markerSizePt, markerSizePt, "FD");
 
   if (marker !== "checked") {
     return;
@@ -136,6 +144,9 @@ function drawTaskListMarker(
   const checkEndXPt = leftPt + markerSizePt * 0.82;
   // 对勾终点 y 坐标。
   const checkEndYPt = markerTopPt + markerSizePt * 0.28;
+  // 对勾颜色。
+  const checkColor = markerStyle?.checkColor || DEFAULT_EXPORT_BACKGROUND_COLOR;
+  setPdfDrawColor(pdf, checkColor);
   pdf.line(checkStartXPt, checkStartYPt, checkMiddleXPt, checkMiddleYPt);
   pdf.line(checkMiddleXPt, checkMiddleYPt, checkEndXPt, checkEndYPt);
 }
@@ -204,17 +215,20 @@ function setInlineTextFont(pdf: JsPdfInstance, fontFamily: string, textStyle?: E
 
 /** 读取行内文本颜色。 */
 function getInlineTextColor(textStyle?: ExportInlineTextStyle): ExportRgbColor {
-  if (textStyle?.linkHref) {
-    return LINK_TEXT_COLOR;
+  if (textStyle?.color) {
+    return textStyle.color;
   }
-  return textStyle?.color || DEFAULT_TEXT_COLOR;
+  if (textStyle?.linkHref) {
+    return DEFAULT_LINK_TEXT_COLOR;
+  }
+  return DEFAULT_EXPORT_TEXT_COLOR;
 }
 
 /** 设置行内文本颜色。 */
 function setInlineTextColor(pdf: JsPdfInstance, textStyle?: ExportInlineTextStyle): void {
   // 文本颜色。
   const textColor = getInlineTextColor(textStyle);
-  pdf.setTextColor(textColor[0], textColor[1], textColor[2]);
+  setPdfTextColor(pdf, textColor);
 }
 
 /** 绘制行内文本高亮背景。 */
@@ -230,7 +244,7 @@ function drawInlineTextBackground(
   const backgroundHeightPt = fontSizePt * 1.05;
   // 背景顶部坐标。
   const backgroundTopPt = baselineYPt - fontSizePt * 0.82;
-  pdf.setFillColor(backgroundColor[0], backgroundColor[1], backgroundColor[2]);
+  setPdfFillColor(pdf, backgroundColor);
   pdf.rect(leftPt, backgroundTopPt, widthPt, backgroundHeightPt, "F");
 }
 
@@ -241,12 +255,13 @@ function drawInlineCodeBackground(
   baselineYPt: number,
   widthPt: number,
   fontSizePt: number,
+  backgroundColor: ExportRgbColor,
 ): void {
   // 背景高度。
   const backgroundHeightPt = fontSizePt + fontSizePt * INLINE_CODE_PADDING_Y_RATIO * 2;
   // 背景顶部坐标。
   const backgroundTopPt = baselineYPt - fontSizePt * 0.82;
-  pdf.setFillColor(INLINE_CODE_BACKGROUND_COLOR[0], INLINE_CODE_BACKGROUND_COLOR[1], INLINE_CODE_BACKGROUND_COLOR[2]);
+  setPdfFillColor(pdf, backgroundColor);
   pdf.roundedRect(leftPt, backgroundTopPt, widthPt, backgroundHeightPt, 2, 2, "F");
 }
 
@@ -264,7 +279,7 @@ function drawInlineTextDecorations(
   }
   // 文本颜色。
   const textColor = getInlineTextColor(textStyle);
-  pdf.setDrawColor(textColor[0], textColor[1], textColor[2]);
+  setPdfDrawColor(pdf, textColor);
   pdf.setLineWidth(Math.max(fontSizePt * 0.04, 0.4));
   if (textStyle.underline) {
     // 下划线 y 坐标。
@@ -318,7 +333,9 @@ function writeInlineTextItem(
     drawInlineTextBackground(pdf, textLeftPt, textBaselineYPt, item.textWidthPt, textFontSizePt, item.style.backgroundColor);
   }
   if (item.style?.code) {
-    drawInlineCodeBackground(pdf, leftPt, textBaselineYPt, item.widthPt, textFontSizePt);
+    // 行内代码实际背景颜色。
+    const codeBackgroundColor = item.style.backgroundColor || DEFAULT_INLINE_CODE_BACKGROUND_COLOR;
+    drawInlineCodeBackground(pdf, leftPt, textBaselineYPt, item.widthPt, textFontSizePt, codeBackgroundColor);
   }
   setInlineTextFont(pdf, fontFamily, item.style);
   pdf.setFontSize(textFontSizePt);
@@ -333,7 +350,7 @@ function writeInlineTextItem(
 export function writeInlineContentTextBlock(
   pdf: JsPdfInstance,
   cursor: PdfWriteCursor,
-  { inlineContent, style, fontFamily, taskListMarker, listMarker, listIndentPt }: WriteTextBlockParams,
+  { inlineContent, style, fontFamily, taskListMarker, taskListMarkerStyle, listMarker, listIndentPt }: WriteTextBlockParams,
 ): void {
   if (!inlineContent || inlineContent.length === 0) {
     return;
@@ -474,7 +491,7 @@ export function writeInlineContentTextBlock(
   printableLines.forEach((line, lineIndex) => {
     ensureLineSpace(pdf, cursor, style.lineHeightPt);
     pdf.setFont(fontFamily, style.fontStyle);
-    pdf.setTextColor(DEFAULT_TEXT_COLOR[0], DEFAULT_TEXT_COLOR[1], DEFAULT_TEXT_COLOR[2]);
+    setPdfTextColor(pdf, style.color);
     if (lineIndex === 0 && listMarker) {
       pdf.text(listMarker, cursor.leftPt + blockIndentLeftPt + listTextIndentPt, cursor.yPt);
     }
@@ -485,6 +502,7 @@ export function writeInlineContentTextBlock(
         cursor.leftPt + blockIndentLeftPt + listTextIndentPt,
         cursor.yPt,
         taskMarkerSizePt,
+        taskListMarkerStyle,
       );
     }
     // 当前行写入 x 坐标。
@@ -502,6 +520,6 @@ export function writeInlineContentTextBlock(
     cursor.yPt += style.lineHeightPt;
   });
   pdf.setFont(fontFamily, style.fontStyle);
-  pdf.setTextColor(DEFAULT_TEXT_COLOR[0], DEFAULT_TEXT_COLOR[1], DEFAULT_TEXT_COLOR[2]);
+  setPdfTextColor(pdf, style.color);
   cursor.yPt += style.marginBottomPt;
 }

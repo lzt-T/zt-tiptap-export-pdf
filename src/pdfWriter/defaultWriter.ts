@@ -1,7 +1,17 @@
 import { type jsPDF as JsPdfInstance } from "jspdf";
+import {
+  DEFAULT_EXPORT_BACKGROUND_COLOR,
+  DEFAULT_EXPORT_TEXT_COLOR,
+  DEFAULT_MUTED_BORDER_COLOR,
+} from "../exportConstants";
 import { splitTextToLines } from "../exportText";
-import { type ExportTaskListMarker, type ExportTextBlockStyle, type PdfWriteCursor } from "../exportTypes";
-import { ensureLineSpace } from "./shared";
+import {
+  type ExportTaskListMarker,
+  type ExportTaskListMarkerStyle,
+  type ExportTextBlockStyle,
+  type PdfWriteCursor,
+} from "../exportTypes";
+import { ensureLineSpace, setPdfDrawColor, setPdfFillColor, setPdfTextColor } from "./shared";
 import { type WriteTextBlockParams } from "./types";
 
 // 任务列表方框字号比例。
@@ -41,12 +51,19 @@ function drawTaskListMarker(
   leftPt: number,
   baselineYPt: number,
   markerSizePt: number,
+  markerStyle?: ExportTaskListMarkerStyle,
 ): void {
   // 方框顶部坐标。
   const markerTopPt = baselineYPt - markerSizePt * 0.8;
-  pdf.setDrawColor(17, 17, 17);
+  // 方框边框颜色。
+  const borderColor = markerStyle?.borderColor || DEFAULT_MUTED_BORDER_COLOR;
+  // 方框背景颜色。
+  const backgroundColor =
+    markerStyle?.backgroundColor || (marker === "checked" ? DEFAULT_EXPORT_TEXT_COLOR : DEFAULT_EXPORT_BACKGROUND_COLOR);
+  setPdfDrawColor(pdf, borderColor);
+  setPdfFillColor(pdf, backgroundColor);
   pdf.setLineWidth(0.8);
-  pdf.rect(leftPt, markerTopPt, markerSizePt, markerSizePt, "S");
+  pdf.rect(leftPt, markerTopPt, markerSizePt, markerSizePt, "FD");
 
   if (marker !== "checked") {
     return;
@@ -64,6 +81,9 @@ function drawTaskListMarker(
   const checkEndXPt = leftPt + markerSizePt * 0.82;
   // 对勾终点 y 坐标。
   const checkEndYPt = markerTopPt + markerSizePt * 0.28;
+  // 对勾颜色。
+  const checkColor = markerStyle?.checkColor || DEFAULT_EXPORT_BACKGROUND_COLOR;
+  setPdfDrawColor(pdf, checkColor);
   pdf.line(checkStartXPt, checkStartYPt, checkMiddleXPt, checkMiddleYPt);
   pdf.line(checkMiddleXPt, checkMiddleYPt, checkEndXPt, checkEndYPt);
 }
@@ -72,10 +92,11 @@ function drawTaskListMarker(
 export function writeDefaultTextBlock(
   pdf: JsPdfInstance,
   cursor: PdfWriteCursor,
-  { text, style, fontFamily, taskListMarker, listMarker, listIndentPt }: WriteTextBlockParams,
+  { text, style, fontFamily, taskListMarker, taskListMarkerStyle, listMarker, listIndentPt }: WriteTextBlockParams,
 ): void {
   pdf.setFont(fontFamily, style.fontStyle);
   pdf.setFontSize(style.fontSizePt);
+  setPdfTextColor(pdf, style.color);
   // 块级左侧缩进。
   const blockIndentLeftPt = style.indentLeftPt || 0;
   // 列表层级缩进。
@@ -116,6 +137,7 @@ export function writeDefaultTextBlock(
         cursor.leftPt + blockIndentLeftPt + listTextIndentPt,
         cursor.yPt,
         taskMarkerSizePt,
+        taskListMarkerStyle,
       );
     }
     if (style.textAlign === "justify" && lineIndex < textLines.length - 1) {

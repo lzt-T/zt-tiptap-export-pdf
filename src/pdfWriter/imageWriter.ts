@@ -2,7 +2,7 @@ import { type jsPDF as JsPdfInstance } from "jspdf";
 import { CSS_PT_PER_PX, PDF_TOP_MARGIN_PT } from "../exportConstants";
 import { splitTextToLines } from "../exportText";
 import { type ExportImageContent, type PdfWriteCursor } from "../exportTypes";
-import { ensureLineSpace } from "./shared";
+import { ensureLineSpace, setPdfTextColor } from "./shared";
 import { type WriteTextBlockParams } from "./types";
 
 // 图片底部与说明文字顶部的可视间距（pt）。
@@ -79,6 +79,7 @@ export function writeImageTextBlock(
   if (captionLines.length > 0) {
     pdf.setFont(fontFamily, style.fontStyle);
     pdf.setFontSize(style.fontSizePt);
+    setPdfTextColor(pdf, style.color);
   }
   captionLines.forEach((captionLine) => {
     ensureLineSpace(pdf, cursor, style.lineHeightPt);

@@ -1,8 +1,8 @@
 import { type jsPDF as JsPdfInstance } from "jspdf";
-import { BLOCKQUOTE_LINE_WIDTH_PT } from "../exportConstants";
+import { BLOCKQUOTE_LINE_WIDTH_PT, DEFAULT_MUTED_BORDER_COLOR } from "../exportConstants";
 import { splitTextToLines } from "../exportText";
 import { type PdfWriteCursor } from "../exportTypes";
-import { ensureLineSpace } from "./shared";
+import { ensureLineSpace, setPdfDrawColor, setPdfTextColor } from "./shared";
 import { type WriteTextBlockParams } from "./types";
 
 /** 写入引用块。 */
@@ -13,6 +13,7 @@ export function writeBlockquoteTextBlock(
 ): void {
   pdf.setFont(fontFamily, style.fontStyle);
   pdf.setFontSize(style.fontSizePt);
+  setPdfTextColor(pdf, style.color);
   // 引用块文本左侧缩进（pt）。
   const quoteIndentPt = style.indentLeftPt || 0;
   // 引用块文本写入 x 坐标。
@@ -27,7 +28,7 @@ export function writeBlockquoteTextBlock(
     const lineStartYPt = cursor.yPt - style.lineHeightPt * 0.8;
     // 当前行竖线终点 y 坐标。
     const lineEndYPt = cursor.yPt + style.lineHeightPt * 0.2;
-    pdf.setDrawColor(180, 180, 180);
+    setPdfDrawColor(pdf, style.borderLeftColor || DEFAULT_MUTED_BORDER_COLOR);
     pdf.setLineWidth(BLOCKQUOTE_LINE_WIDTH_PT);
     pdf.line(cursor.leftPt, lineStartYPt, cursor.leftPt, lineEndYPt);
     pdf.text(lineText, quoteTextLeftPt, cursor.yPt);

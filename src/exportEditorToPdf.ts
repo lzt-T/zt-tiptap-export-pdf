@@ -30,6 +30,60 @@ import { ensureBuiltinChineseFontRegistered, waitForFontReady } from "./font";
 
 // 允许空内容占位的文本块标签。
 const EMPTY_TEXT_PLACEHOLDER_TAG_NAMES = new Set(["p", "li", "h1", "h2", "h3", "h4", "h5", "h6", "blockquote", "pre"]);
+// 浅色 PDF 使用的编辑器主题变量。
+const LIGHT_EXPORT_THEME_VARIABLE_MAP: Record<string, string> = {
+  "--background": "#ffffff",
+  "--border": "#e5e7eb",
+  "--code-block-fg": "#151515",
+  "--foreground": "#171717",
+  "--muted-foreground": "#737373",
+  "--primary": "#171717",
+  "--ui-bg-muted": "#f8fafc",
+  "--ui-bg-selected": "#eef2ff",
+  "--ui-bg-subtle": "#f1f5f9",
+  "--ui-border-muted": "#e2e8f0",
+  "--ui-border-strong": "#cbd5e1",
+  "--ui-text-inverse": "#ffffff",
+  "--ui-text-link": "#1d4ed8",
+  "--ui-text-muted": "#64748b",
+  "--ui-text-strong": "#111827",
+};
+// 不应进入 PDF 的编辑临时状态类名。
+const TRANSIENT_EDITOR_STATE_CLASS_NAMES = ["ProseMirror-selectednode", "selectedCell", "zt-selection-mirror"];
+
+/** 将离屏样式上下文固定为浅色导出主题。 */
+function applyLightExportTheme(element: HTMLElement): void {
+  Object.entries(LIGHT_EXPORT_THEME_VARIABLE_MAP).forEach(([propertyName, propertyValue]) => {
+    element.style.setProperty(propertyName, propertyValue);
+  });
+}
+
+/** 清除克隆内容中的选区和当前节点高亮类。 */
+function removeTransientEditorStateClasses(element: HTMLElement): void {
+  // 克隆根节点及其全部后代。
+  const exportElements = [element, ...Array.from(element.querySelectorAll("*"))];
+  exportElements.forEach((exportElement) => {
+    TRANSIENT_EDITOR_STATE_CLASS_NAMES.forEach((className) => {
+      exportElement.classList.remove(className);
+    });
+  });
+}
+
+/** 覆盖宿主 html.dark 仍会命中的代码样式选择器。 */
+function applyLightExportContentStyles(element: HTMLElement): void {
+  element.querySelectorAll("pre").forEach((preElement) => {
+    if (preElement instanceof HTMLElement && !preElement.style.background && !preElement.style.backgroundColor) {
+      preElement.style.background = "#f0f4fb";
+    }
+  });
+  element.querySelectorAll(":not(pre) > code").forEach((codeElement) => {
+    if (!(codeElement instanceof HTMLElement) || codeElement.style.background || codeElement.style.backgroundColor) {
+      return;
+    }
+    codeElement.style.background = "#f1f5f9";
+    codeElement.style.borderColor = "transparent";
+  });
+}
 
 /** 判断空内容节点是否应保留一行占位高度。 */
 function shouldKeepEmptyTextPlaceholder(
@@ -91,7 +145,8 @@ export async function exportEditorToPdf(
   offscreenContainer.style.overflow = "visible";
   // 补齐编辑器样式祖先，确保 .editor-wrapper .ProseMirror 规则生效。
   const styleContextWrapper = document.createElement("div");
-  styleContextWrapper.className = "editor-wrapper";
+  styleContextWrapper.className = "zt-tiptap-theme editor-wrapper";
+  applyLightExportTheme(styleContextWrapper);
   styleContextWrapper.style.width = `${renderWidthPx}px`;
   styleContextWrapper.style.height = "auto";
   styleContextWrapper.style.maxHeight = "none";
@@ -99,8 +154,10 @@ export async function exportEditorToPdf(
 
   // 克隆后的编辑区节点。
   const clonedElement = element.cloneNode(true) as HTMLElement;
+  removeTransientEditorStateClasses(clonedElement);
+  applyLightExportContentStyles(clonedElement);
   clonedElement.style.width = `${renderWidthPx}px`;
-  clonedElement.style.color = "#111111";
+  clonedElement.style.color = "var(--ui-text-strong)";
   clonedElement.style.background = "#ffffff";
   clonedElement.style.height = "auto";
   clonedElement.style.maxHeight = "none";
@@ -113,7 +170,7 @@ export async function exportEditorToPdf(
     proseMirrorElement.style.width = `${renderWidthPx}px`;
     proseMirrorElement.style.maxWidth = `${renderWidthPx}px`;
     proseMirrorElement.style.boxSizing = "border-box";
-    proseMirrorElement.style.color = "#111111";
+    proseMirrorElement.style.color = "var(--ui-text-strong)";
     proseMirrorElement.style.background = "#ffffff";
     proseMirrorElement.style.fontFamily = resolvedFontFamily;
     proseMirrorElement.style.whiteSpace = "normal";
@@ -176,6 +233,7 @@ export async function exportEditorToPdf(
         fontFamily: resolvedFontFamily,
         tableContent: blockContent.tableContent,
         taskListMarker: blockContent.taskListMarker,
+        taskListMarkerStyle: blockContent.taskListMarkerStyle,
         listMarker: blockContent.listMarker,
         listIndentPt: blockContent.listIndentPt,
         blockType: blockContent.blockType,
