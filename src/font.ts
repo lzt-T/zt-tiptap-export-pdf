@@ -1,8 +1,4 @@
 import { type jsPDF } from "jspdf";
-import { BUILTIN_CHINESE_BOLD_FONT_BASE64 } from "./fonts/builtinChineseBoldFontBase64";
-import { BUILTIN_CHINESE_BOLD_ITALIC_FONT_BASE64 } from "./fonts/builtinChineseBoldItalicFontBase64";
-import { BUILTIN_CHINESE_FONT_BASE64 } from "./fonts/builtinChineseFontBase64";
-import { BUILTIN_CHINESE_ITALIC_FONT_BASE64 } from "./fonts/builtinChineseItalicFontBase64";
 
 /** 内置常规字体在 VFS 中的文件名。 */
 const BUILTIN_REGULAR_FONT_FILE_NAME = "NotoSansSC-Regular.ttf";
@@ -21,20 +17,41 @@ const BUILTIN_PDF_FONT_FILE_MAP = {
   italic: BUILTIN_ITALIC_FONT_FILE_NAME,
   normal: BUILTIN_REGULAR_FONT_FILE_NAME,
 } as const;
-/** 内置字体注册到 jsPDF 的 base64 映射。 */
-const BUILTIN_PDF_FONT_BASE64_MAP = {
-  [BUILTIN_BOLD_FONT_FILE_NAME]: BUILTIN_CHINESE_BOLD_FONT_BASE64,
-  [BUILTIN_BOLD_ITALIC_FONT_FILE_NAME]: BUILTIN_CHINESE_BOLD_ITALIC_FONT_BASE64,
-  [BUILTIN_ITALIC_FONT_FILE_NAME]: BUILTIN_CHINESE_ITALIC_FONT_BASE64,
-  [BUILTIN_REGULAR_FONT_FILE_NAME]: BUILTIN_CHINESE_FONT_BASE64,
-} as const;
 /** 导出时字体加载参考字号（px）。 */
 const EXPORT_FONT_LOAD_SIZE_PX = 16;
 /** 内置字体 data URL 前缀。 */
 const BUILTIN_FONT_DATA_URL_PREFIX = "data:font/ttf;base64,";
 
+/** 内置中文字体的四种样式数据。 */
+interface BuiltinChineseFontBase64Set {
+  bold: string;
+  boldItalic: string;
+  italic: string;
+  regular: string;
+}
+
+/** 内置中文字体加载任务，避免并发导出时重复导入。 */
+let builtinChineseFontLoadTask: Promise<BuiltinChineseFontBase64Set> | null = null;
 /** 浏览器内置字体注册任务，避免并发导出时重复加载。 */
 let browserBuiltinFontRegisterTask: Promise<void> | null = null;
+
+/** 按需加载内置中文字体，保持四种字体为独立异步资源。 */
+async function loadBuiltinChineseFonts(): Promise<BuiltinChineseFontBase64Set> {
+  if (!builtinChineseFontLoadTask) {
+    builtinChineseFontLoadTask = Promise.all([
+      import("./fonts/builtinChineseFontBase64"),
+      import("./fonts/builtinChineseBoldFontBase64"),
+      import("./fonts/builtinChineseItalicFontBase64"),
+      import("./fonts/builtinChineseBoldItalicFontBase64"),
+    ]).then(([regularFontModule, boldFontModule, italicFontModule, boldItalicFontModule]) => ({
+      bold: boldFontModule.BUILTIN_CHINESE_BOLD_FONT_BASE64,
+      boldItalic: boldItalicFontModule.BUILTIN_CHINESE_BOLD_ITALIC_FONT_BASE64,
+      italic: italicFontModule.BUILTIN_CHINESE_ITALIC_FONT_BASE64,
+      regular: regularFontModule.BUILTIN_CHINESE_FONT_BASE64,
+    }));
+  }
+  return builtinChineseFontLoadTask;
+}
 
 /**
  * 确保内置中文字体已注册到浏览器字体系统。
@@ -50,30 +67,32 @@ async function ensureBrowserBuiltinFontRegistered(fontFamily: string): Promise<v
   }
   if (!browserBuiltinFontRegisterTask) {
     browserBuiltinFontRegisterTask = (async () => {
+      // 内置中文字体数据。
+      const builtinFonts = await loadBuiltinChineseFonts();
       /** 可写字体集合，兼容当前 DOM 类型声明缺少 add 的情况。 */
       const writableFontSet = fontSet as FontFaceSet & { add(font: FontFace): void };
       /** 浏览器常规字体对象，用于让离屏 DOM 按内置字体排版。 */
       const regularFontFace = new FontFace(
         BUILTIN_FONT_FAMILY,
-        `url(${BUILTIN_FONT_DATA_URL_PREFIX}${BUILTIN_CHINESE_FONT_BASE64}) format("truetype")`,
+        `url(${BUILTIN_FONT_DATA_URL_PREFIX}${builtinFonts.regular}) format("truetype")`,
         { style: "normal", weight: "400" },
       );
       /** 浏览器粗体字体对象，用于让加粗文本按真实粗体排版。 */
       const boldFontFace = new FontFace(
         BUILTIN_FONT_FAMILY,
-        `url(${BUILTIN_FONT_DATA_URL_PREFIX}${BUILTIN_CHINESE_BOLD_FONT_BASE64}) format("truetype")`,
+        `url(${BUILTIN_FONT_DATA_URL_PREFIX}${builtinFonts.bold}) format("truetype")`,
         { style: "normal", weight: "700" },
       );
       /** 浏览器斜体字体对象，用于让斜体文本按真实斜体排版。 */
       const italicFontFace = new FontFace(
         BUILTIN_FONT_FAMILY,
-        `url(${BUILTIN_FONT_DATA_URL_PREFIX}${BUILTIN_CHINESE_ITALIC_FONT_BASE64}) format("truetype")`,
+        `url(${BUILTIN_FONT_DATA_URL_PREFIX}${builtinFonts.italic}) format("truetype")`,
         { style: "italic", weight: "400" },
       );
       /** 浏览器粗斜体字体对象，用于让粗斜体文本按真实粗斜体排版。 */
       const boldItalicFontFace = new FontFace(
         BUILTIN_FONT_FAMILY,
-        `url(${BUILTIN_FONT_DATA_URL_PREFIX}${BUILTIN_CHINESE_BOLD_ITALIC_FONT_BASE64}) format("truetype")`,
+        `url(${BUILTIN_FONT_DATA_URL_PREFIX}${builtinFonts.boldItalic}) format("truetype")`,
         { style: "italic", weight: "700" },
       );
       /** 需要注册到浏览器的内置字体对象。 */
@@ -90,8 +109,17 @@ async function ensureBrowserBuiltinFontRegistered(fontFamily: string): Promise<v
 /**
  * 确保内置中文字体已注册到当前 jsPDF 运行时。
  */
-export function ensureBuiltinChineseFontRegistered(pdf: jsPDF): void {
-  Object.entries(BUILTIN_PDF_FONT_BASE64_MAP).forEach(([fontFileName, fontBase64]) => {
+export async function ensureBuiltinChineseFontRegistered(pdf: jsPDF): Promise<void> {
+  // 内置中文字体数据。
+  const builtinFonts = await loadBuiltinChineseFonts();
+  // 内置字体注册到 jsPDF 的 base64 映射。
+  const builtinPdfFontBase64Map = {
+    [BUILTIN_BOLD_FONT_FILE_NAME]: builtinFonts.bold,
+    [BUILTIN_BOLD_ITALIC_FONT_FILE_NAME]: builtinFonts.boldItalic,
+    [BUILTIN_ITALIC_FONT_FILE_NAME]: builtinFonts.italic,
+    [BUILTIN_REGULAR_FONT_FILE_NAME]: builtinFonts.regular,
+  } as const;
+  Object.entries(builtinPdfFontBase64Map).forEach(([fontFileName, fontBase64]) => {
     if (!pdf.existsFileInVFS(fontFileName)) {
       pdf.addFileToVFS(fontFileName, fontBase64);
     }

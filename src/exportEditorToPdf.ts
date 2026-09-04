@@ -127,7 +127,7 @@ export async function exportEditorToPdf(
     unit: "pt",
     format: "a4",
   });
-  ensureBuiltinChineseFontRegistered(pdf);
+  await ensureBuiltinChineseFontRegistered(pdf);
 
   // PDF 可用内容宽度。
   const pdfContentWidthPt = pdf.internal.pageSize.getWidth() - PDF_HORIZONTAL_MARGIN_PT * 2 - PDF_TEXT_WIDTH_SAFETY_PT;
